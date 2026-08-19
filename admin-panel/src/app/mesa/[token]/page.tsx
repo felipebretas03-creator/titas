@@ -17,7 +17,7 @@ export default function WelcomePage() {
 
   const handleStart = () => {
     // If the table is available, we open a session or mark it as occupied
-    let session = store.sessoesMesa.find(s => s.table_id === table.id && s.status !== 'CLOSED')
+    const session = store.sessoesMesa.find(s => s.table_id === table.id && s.status !== 'CLOSED')
     
     if (!session) {
       store.addSessaoMesa({

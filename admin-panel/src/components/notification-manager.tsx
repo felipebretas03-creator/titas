@@ -34,7 +34,7 @@ export function NotificationManager() {
 function playNotificationSound() {
   try {
     // Basic chime sound using Web Audio API to avoid needing external MP3s
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioCtx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     
     // First chime
     createChime(audioCtx, 880, 0); // A5

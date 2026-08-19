@@ -93,7 +93,7 @@ export function TableDetailsSheet({ tableId, isOpen, onClose }: TableDetailsShee
     onClose()
   }
 
-  const handleAddProduct = (product: any) => {
+  const handleAddProduct = (product: { preco: number }) => {
     if (!session) return;
     
     store.addPedido({
@@ -211,7 +211,7 @@ export function TableDetailsSheet({ tableId, isOpen, onClose }: TableDetailsShee
                 {requests.map(req => (
                   <li key={req.id} className="text-sm font-medium text-amber-900 bg-white p-2 rounded border border-amber-100">
                     - {req.type === 'WAITER' ? 'Chamou o garçom' : req.type === 'CLOSE_BILL' ? 'Pediu a conta' : 'Outra solicitação'}
-                    {req.message && <span className="block text-xs text-amber-700 mt-1">"{req.message}"</span>}
+                    {req.message && <span className="block text-xs text-amber-700 mt-1">&quot;{req.message}&quot;</span>}
                   </li>
                 ))}
               </ul>

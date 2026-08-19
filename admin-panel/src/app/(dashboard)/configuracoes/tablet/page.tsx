@@ -15,7 +15,7 @@ export default function TabletConfigPage() {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState(configuracoesTablet)
 
-  const handleChange = (field: keyof typeof configuracoesTablet, value: any) => {
+  const handleChange = (field: keyof typeof configuracoesTablet, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 

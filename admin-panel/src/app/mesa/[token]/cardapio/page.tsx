@@ -110,7 +110,7 @@ export default function CardapioTablet() {
             <ChevronLeft size={28} />
           </Button>
           <div>
-            <h2 className="text-2xl font-black text-primary">Tita's</h2>
+            <h2 className="text-2xl font-black text-primary">Tita&apos;s</h2>
             <span className="text-muted-foreground font-semibold">{table.name}</span>
           </div>
         </div>
