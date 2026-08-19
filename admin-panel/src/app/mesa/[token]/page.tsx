@@ -20,9 +20,7 @@ export default function WelcomePage() {
     let session = store.sessoesMesa.find(s => s.table_id === table.id && s.status !== 'CLOSED')
     
     if (!session) {
-      const sessionId = generateId()
       store.addSessaoMesa({
-        id: sessionId,
         table_id: table.id,
         status: 'OPEN',
         openedAt: new Date().toISOString(),

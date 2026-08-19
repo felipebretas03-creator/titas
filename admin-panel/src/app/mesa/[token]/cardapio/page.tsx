@@ -72,16 +72,13 @@ export default function CardapioTablet() {
   const handleSendOrder = () => {
     if (cart.length === 0) return
     
-    const pedidoId = generateId()
     store.addPedido({
-      id: pedidoId,
       channel: 'TABLE',
       tableId: table.id,
       sessionId: session.id,
       status: 'CONFIRMED',
       items: cart,
-      total: cartTotal,
-      createdAt: new Date().toISOString()
+      total: cartTotal
     })
     
     store.updateSessaoMesa(session.id, { totalAmount: session.totalAmount + cartTotal })

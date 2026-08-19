@@ -96,15 +96,12 @@ export function TableDetailsSheet({ tableId, isOpen, onClose }: TableDetailsShee
   const handleAddProduct = (product: any) => {
     if (!session) return;
     
-    const pedidoId = generateId();
     store.addPedido({
-      id: pedidoId,
       channel: 'TABLE',
       tableId: table.id,
       sessionId: session.id,
       status: 'CONFIRMED',
       total: product.preco,
-      createdAt: new Date().toISOString(),
       items: [
         {
           id: generateId(),
