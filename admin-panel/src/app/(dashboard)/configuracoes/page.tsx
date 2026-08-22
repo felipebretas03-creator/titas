@@ -3,11 +3,12 @@
 import { useStore } from "@/store"
 import { Card } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { Settings, Smartphone, Printer, MonitorOff, CreditCard, Tags, Briefcase, ChevronRight, ShieldCheck, MapPin } from "lucide-react"
+import { Settings, Smartphone, Printer, MonitorOff, CreditCard, Tags, Briefcase, ChevronRight, ShieldCheck, MapPin, MonitorCheck } from "lucide-react"
 import { FormasPagamentoModal } from "./components/FormasPagamentoModal"
 import { CategoriasModal } from "./components/CategoriasModal"
 import { CargosModal } from "./components/CargosModal"
 import { RegioesEntregaModal } from "./components/RegioesEntregaModal"
+import { EstacoesMontagemModal } from "./components/EstacoesMontagemModal"
 import { useState } from "react"
 
 export default function ConfiguracoesPage() {
@@ -47,7 +48,7 @@ export default function ConfiguracoesPage() {
                    </div>
                    <div>
                       <h3 className="font-bold text-base md:text-lg">Modo Mesa Dupla</h3>
-                      <p className="text-xs md:text-sm text-muted-foreground mt-1 max-w-sm">Ativa o layout otimizado para dois monitores (Caixa e Cozinha).</p>
+                      <p className="text-xs md:text-sm text-muted-foreground mt-1 max-w-sm">Divide pedidos de delivery por paridade entre as estações 1 e 2.</p>
                    </div>
                 </div>
                 <Switch 
@@ -163,6 +164,20 @@ export default function ConfiguracoesPage() {
                 <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
              </div>
 
+             {/* Estações de Montagem */}
+             <div onClick={() => handleAdminClick('Estações de Montagem')} className="group cursor-pointer p-4 md:p-5 rounded-2xl border border-border/50 bg-[#fcfbfb] hover:bg-white hover:shadow-md hover:border-primary/20 transition-all flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                   <div className="w-10 h-10 shrink-0 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <MonitorCheck size={18} />
+                   </div>
+                   <div>
+                      <h3 className="font-bold text-sm md:text-base text-foreground">Estações de Montagem</h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">Gestão de tablets e filtros de plataforma</p>
+                   </div>
+                </div>
+                <ChevronRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
+             </div>
+
           </div>
         </Card>
 
@@ -172,6 +187,7 @@ export default function ConfiguracoesPage() {
       <CategoriasModal isOpen={modalOpen === 'Categorias de Produtos'} onClose={() => setModalOpen(null)} />
       <CargosModal isOpen={modalOpen === 'Cargos e Funções'} onClose={() => setModalOpen(null)} />
       <RegioesEntregaModal isOpen={modalOpen === 'Regiões de Entrega'} onClose={() => setModalOpen(null)} />
+      <EstacoesMontagemModal isOpen={modalOpen === 'Estações de Montagem'} onClose={() => setModalOpen(null)} />
     </div>
   )
 }

@@ -145,6 +145,14 @@ export type Configuracoes = {
   impressaoAutomatica: boolean;
 }
 
+// Novos tipos de Estação de Montagem (Cozinha)
+export type EstacaoMontagem = {
+  id: string;
+  nome: string; // Ex: "Mesa 1", "Mesa 2"
+  filtroPlataforma?: string[]; // IDs/nomes das plataformas permitidas (se houver filtro)
+  ativa: boolean;
+}
+
 // Novos tipos do Tablet
 export type MesaStatus = 'AVAILABLE' | 'OCCUPIED' | 'NEW_ORDER' | 'PREPARING' | 'READY' | 'SERVICE_REQUESTED' | 'BILL_REQUESTED' | 'CLOSING' | 'CLOSED' | 'INACTIVE';
 
@@ -245,6 +253,7 @@ interface AppState {
   // Tablet states
   mesas: Mesa[];
   sessoesMesa: SessaoMesa[];
+  estacoesMontagem: EstacaoMontagem[];
   pedidos: Pedido[];
   solicitacoesAtendimento: SolicitacaoAtendimento[];
   configuracoesTablet: ConfiguracoesTablet;
@@ -297,6 +306,10 @@ interface AppState {
 
   addSessaoMesa: (sessao: Omit<SessaoMesa, 'id'>) => void;
   updateSessaoMesa: (id: string, data: Partial<SessaoMesa>) => void;
+
+  addEstacaoMontagem: (estacao: Omit<EstacaoMontagem, 'id'>) => void;
+  updateEstacaoMontagem: (id: string, data: Partial<EstacaoMontagem>) => void;
+  deleteEstacaoMontagem: (id: string) => void;
 
   addPedido: (pedido: Omit<Pedido, 'id' | 'createdAt'>) => void;
   updatePedido: (id: string, data: Partial<Pedido>) => void;
@@ -442,7 +455,11 @@ export const useStore = create<AppState>()(
         { id: '3', name: 'Balcão 01', capacity: 1, token_hash: 'ghi789xyz', status: 'AVAILABLE', active: true, createdAt: new Date().toISOString() },
       ],
       sessoesMesa: [
-        { id: 's1', table_id: '2', status: 'OPEN', openedAt: new Date().toISOString(), totalAmount: 45.00 }
+        { id: '1', table_id: '2', status: 'OPEN', openedAt: new Date(Date.now() - 3600000).toISOString(), totalAmount: 145.50 }
+      ],
+      estacoesMontagem: [
+        { id: '1', nome: 'Mesa 1 (Salão + Delivery Ímpar)', ativa: true },
+        { id: '2', nome: 'Mesa 2 (Delivery Par)', ativa: true }
       ],
       pedidos: [
         { id: 'p1', channel: 'DELIVERY', clienteId: '1', enderecoEntrega: { cep: '01001-000', estado: 'SP', cidade: 'São Paulo', bairro: 'Sé', logradouro: 'Praça da Sé', numero: '1' }, items: [{ id: 'i1', produtoId: '1', nome: 'X-Burger Clássico', quantidade: 2, precoUnitario: 25.90 }], total: 51.80, status: 'DELIVERED', formaPagamento: 'PIX', tempoEntregaMins: 35, createdAt: new Date(Date.now() - 86400000 * 0.5).toISOString() },
@@ -561,6 +578,15 @@ export const useStore = create<AppState>()(
       })),
       updateSessaoMesa: (id, data) => set((state) => ({
         sessoesMesa: state.sessoesMesa.map(s => s.id === id ? { ...s, ...data } : s)
+      })),
+      addEstacaoMontagem: (data) => set((state) => ({
+        estacoesMontagem: [...state.estacoesMontagem, { ...data, id: generateId() }]
+      })),
+      updateEstacaoMontagem: (id, data) => set((state) => ({
+        estacoesMontagem: state.estacoesMontagem.map(e => e.id === id ? { ...e, ...data } : e)
+      })),
+      deleteEstacaoMontagem: (id) => set((state) => ({
+        estacoesMontagem: state.estacoesMontagem.filter(e => e.id !== id)
       })),
 
       addPedido: (data) => set((state) => {
