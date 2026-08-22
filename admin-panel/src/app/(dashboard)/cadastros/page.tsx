@@ -17,6 +17,7 @@ export default function CadastrosPage() {
   const [nome, setNome] = useState("")
   const [preco, setPreco] = useState("")
   const [categoria, setCategoria] = useState("")
+  const [estoqueMinimo, setEstoqueMinimo] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,6 +28,7 @@ export default function CadastrosPage() {
       preco: parseFloat(preco),
       custo: 0,
       estoqueAtual: 0,
+      estoqueMinimo: estoqueMinimo ? parseInt(estoqueMinimo) : 0,
       categoria,
       status: "Ativo"
     })
@@ -34,6 +36,7 @@ export default function CadastrosPage() {
     setNome("")
     setPreco("")
     setCategoria("")
+    setEstoqueMinimo("")
     setIsOpen(false)
   }
 
@@ -57,9 +60,15 @@ export default function CadastrosPage() {
                 <label className="text-sm font-semibold text-muted-foreground">Nome do Produto</label>
                 <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Hambúrguer Duplo" className="rounded-xl border-border/60" required />
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-muted-foreground">Preço (R$)</label>
-                <Input type="number" step="0.01" value={preco} onChange={(e) => setPreco(e.target.value)} placeholder="Ex: 29.90" className="rounded-xl border-border/60" required />
+              <div className="flex gap-4">
+                <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-sm font-semibold text-muted-foreground">Preço (R$)</label>
+                  <Input type="number" step="0.01" value={preco} onChange={(e) => setPreco(e.target.value)} placeholder="Ex: 29.90" className="rounded-xl border-border/60" required />
+                </div>
+                <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-sm font-semibold text-muted-foreground">Estoque Mín. (Alerta)</label>
+                  <Input type="number" min="0" value={estoqueMinimo} onChange={(e) => setEstoqueMinimo(e.target.value)} placeholder="Ex: 10" className="rounded-xl border-border/60" />
+                </div>
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold text-muted-foreground">Categoria</label>
