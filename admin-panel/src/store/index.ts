@@ -19,11 +19,17 @@ export type Categoria = {
   nome: string;
 }
 
+export type Cargo = {
+  id: string;
+  nome: string;
+  status: 'Ativo' | 'Inativo';
+}
+
 export type Usuario = {
   id: string;
   nome: string;
   email: string;
-  perfil: 'Admin' | 'Gerente' | 'Caixa' | 'Montagem' | 'Garçom' | 'Motoboy';
+  perfil: string; // Updated to be dynamic based on Cargos
   status: 'Ativo' | 'Inativo';
 }
 
@@ -46,6 +52,13 @@ export type Conta = {
   status: 'Pendente' | 'Pago';
 }
 
+export type FormaPagamento = {
+  id: string;
+  nome: string;
+  taxa: number; // Porcentagem de taxa
+  status: 'Ativo' | 'Inativo';
+}
+
 export type Cliente = {
   id: string;
   nome: string;
@@ -60,6 +73,14 @@ export type Cliente = {
   frequencia: number;
   totalGasto: number;
   ultimaCompra: string;
+}
+
+export type RegiaoEntrega = {
+  id: string;
+  nome: string;
+  taxa: number;
+  prazoMins: number;
+  status: 'Ativo' | 'Inativo';
 }
 
 export type MovimentacaoEstoque = {
@@ -162,9 +183,12 @@ interface AppState {
   produtos: Produto[];
   categorias: Categoria[];
   usuarios: Usuario[];
+  cargos: Cargo[];
   transacoes: Transacao[];
   contas: Conta[];
+  formasPagamento: FormaPagamento[];
   clientes: Cliente[];
+  regioesEntrega: RegiaoEntrega[];
   movimentacoesEstoque: MovimentacaoEstoque[];
   configuracoes: Configuracoes;
   
@@ -184,14 +208,23 @@ interface AppState {
   addCategoria: (categoria: Omit<Categoria, 'id'>) => void;
   deleteCategoria: (id: string) => void;
 
-  // Actions Usuarios
+  // Actions Usuarios & Cargos
   addUsuario: (usuario: Omit<Usuario, 'id'>) => void;
   updateUsuario: (id: string, data: Partial<Usuario>) => void;
   deleteUsuario: (id: string) => void;
+  
+  addCargo: (cargo: Omit<Cargo, 'id'>) => void;
+  deleteCargo: (id: string) => void;
 
   // Actions Financeiro e Config
   addTransacao: (transacao: Omit<Transacao, 'id' | 'data'>) => void;
   updateConfiguracoes: (data: Partial<Configuracoes>) => void;
+  
+  addFormaPagamento: (data: Omit<FormaPagamento, 'id'>) => void;
+  deleteFormaPagamento: (id: string) => void;
+
+  addRegiaoEntrega: (data: Omit<RegiaoEntrega, 'id'>) => void;
+  deleteRegiaoEntrega: (id: string) => void;
   
   // Actions Tablet
   updateConfiguracoesTablet: (data: Partial<ConfiguracoesTablet>) => void;
@@ -230,6 +263,14 @@ export const useStore = create<AppState>()(
         { id: '3', nome: 'Porções' },
         { id: '4', nome: 'Combos' },
       ],
+      cargos: [
+        { id: '1', nome: 'Admin', status: 'Ativo' },
+        { id: '2', nome: 'Gerente', status: 'Ativo' },
+        { id: '3', nome: 'Caixa', status: 'Ativo' },
+        { id: '4', nome: 'Montagem', status: 'Ativo' },
+        { id: '5', nome: 'Garçom', status: 'Ativo' },
+        { id: '6', nome: 'Motoboy', status: 'Ativo' },
+      ],
       usuarios: [
         { id: '1', nome: 'Marcos Felipe', email: 'admin@titas.com', perfil: 'Admin', status: 'Ativo' },
         { id: '2', nome: 'João Caixa', email: 'joao@titas.com', perfil: 'Caixa', status: 'Ativo' },
@@ -255,6 +296,12 @@ export const useStore = create<AppState>()(
         { id: '4', tipo: 'Pagar', descricao: 'Internet', valor: 150, vencimento: new Date(Date.now() + 86400000 * 5).toISOString(), status: 'Pendente' },
         { id: '5', tipo: 'Receber', descricao: 'Vendas Cartão (Cielo)', valor: 3200, vencimento: new Date(Date.now() + 86400000 * 2).toISOString(), status: 'Pendente' },
       ],
+      formasPagamento: [
+        { id: '1', nome: 'PIX', taxa: 0, status: 'Ativo' },
+        { id: '2', nome: 'Cartão de Crédito', taxa: 2.5, status: 'Ativo' },
+        { id: '3', nome: 'Cartão de Débito', taxa: 1.2, status: 'Ativo' },
+        { id: '4', nome: 'Dinheiro', taxa: 0, status: 'Ativo' },
+      ],
       clientes: [
         { id: '1', nome: 'Ana Souza', telefone: '11999999999', cep: '01001-000', estado: 'SP', cidade: 'São Paulo', bairro: 'Sé', logradouro: 'Praça da Sé', numero: '1', frequencia: 12, totalGasto: 450.50, ultimaCompra: new Date().toISOString() },
         { id: '2', nome: 'Pedro Henrique', telefone: '11988888888', cep: '20040-020', estado: 'RJ', cidade: 'Rio de Janeiro', bairro: 'Centro', logradouro: 'Avenida Rio Branco', numero: '156', frequencia: 3, totalGasto: 85.00, ultimaCompra: new Date(Date.now() - 500000000).toISOString() },
@@ -262,6 +309,12 @@ export const useStore = create<AppState>()(
         { id: '4', nome: 'Lucas Faria', telefone: '11966666666', cep: '04538-132', estado: 'SP', cidade: 'São Paulo', bairro: 'Itaim Bibi', logradouro: 'Av Faria Lima', numero: '1000', frequencia: 5, totalGasto: 350.00, ultimaCompra: new Date(Date.now() - 86400000 * 12).toISOString() },
         { id: '5', nome: 'Roberto Alves', telefone: '11955555555', cep: '05407-002', estado: 'SP', cidade: 'São Paulo', bairro: 'Pinheiros', logradouro: 'Rua Teodoro Sampaio', numero: '2500', frequencia: 8, totalGasto: 620.00, ultimaCompra: new Date(Date.now() - 86400000 * 2).toISOString() },
         { id: '6', nome: 'Juliana Costa', telefone: '11944444444', cep: '04001-001', estado: 'SP', cidade: 'São Paulo', bairro: 'Paraíso', logradouro: 'Rua Vergueiro', numero: '100', frequencia: 2, totalGasto: 95.00, ultimaCompra: new Date(Date.now() - 86400000 * 20).toISOString() },
+      ],
+      regioesEntrega: [
+        { id: '1', nome: 'Centro', taxa: 5.0, prazoMins: 30, status: 'Ativo' },
+        { id: '2', nome: 'Zona Sul', taxa: 8.5, prazoMins: 45, status: 'Ativo' },
+        { id: '3', nome: 'Zona Norte', taxa: 10.0, prazoMins: 50, status: 'Ativo' },
+        { id: '4', nome: 'Zona Leste', taxa: 12.0, prazoMins: 60, status: 'Ativo' },
       ],
       movimentacoesEstoque: [
         { id: '1', produtoId: '1', tipo: 'Saida', quantidade: 5, motivo: 'Venda', data: new Date().toISOString() },
@@ -357,6 +410,15 @@ export const useStore = create<AppState>()(
       updateConfiguracoes: (data) => set((state) => ({
         configuracoes: { ...state.configuracoes, ...data }
       })),
+
+      addCargo: (data) => set((state) => ({ cargos: [...state.cargos, { ...data, id: generateId() }] })),
+      deleteCargo: (id) => set((state) => ({ cargos: state.cargos.filter(c => c.id !== id) })),
+
+      addFormaPagamento: (data) => set((state) => ({ formasPagamento: [...state.formasPagamento, { ...data, id: generateId() }] })),
+      deleteFormaPagamento: (id) => set((state) => ({ formasPagamento: state.formasPagamento.filter(f => f.id !== id) })),
+
+      addRegiaoEntrega: (data) => set((state) => ({ regioesEntrega: [...state.regioesEntrega, { ...data, id: generateId() }] })),
+      deleteRegiaoEntrega: (id) => set((state) => ({ regioesEntrega: state.regioesEntrega.filter(r => r.id !== id) })),
       
       // Tablet Actions
       updateConfiguracoesTablet: (data) => set((state) => ({

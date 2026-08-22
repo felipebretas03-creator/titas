@@ -4,15 +4,18 @@ import { useStore } from "@/store"
 import { Card } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { Settings, Smartphone, Printer, MonitorOff, CreditCard, Tags, Briefcase, ChevronRight, ShieldCheck, MapPin } from "lucide-react"
-import { toast } from "sonner"
+import { FormasPagamentoModal } from "./components/FormasPagamentoModal"
+import { CategoriasModal } from "./components/CategoriasModal"
+import { CargosModal } from "./components/CargosModal"
+import { RegioesEntregaModal } from "./components/RegioesEntregaModal"
+import { useState } from "react"
 
 export default function ConfiguracoesPage() {
   const { configuracoes, updateConfiguracoes } = useStore()
+  const [modalOpen, setModalOpen] = useState<string | null>(null)
 
   const handleAdminClick = (area: string) => {
-    toast(`Abrindo configurações de ${area}...`, {
-      description: "Esta funcionalidade abrirá um modal ou página dedicada em breve."
-    })
+    setModalOpen(area)
   }
 
   return (
@@ -164,6 +167,11 @@ export default function ConfiguracoesPage() {
         </Card>
 
       </div>
+      
+      <FormasPagamentoModal isOpen={modalOpen === 'Formas de Pagamento'} onClose={() => setModalOpen(null)} />
+      <CategoriasModal isOpen={modalOpen === 'Categorias de Produtos'} onClose={() => setModalOpen(null)} />
+      <CargosModal isOpen={modalOpen === 'Cargos e Funções'} onClose={() => setModalOpen(null)} />
+      <RegioesEntregaModal isOpen={modalOpen === 'Regiões de Entrega'} onClose={() => setModalOpen(null)} />
     </div>
   )
 }
