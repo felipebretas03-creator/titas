@@ -18,6 +18,7 @@ export default function FinanceiroPage() {
   const [tipo, setTipo] = useState<"Entrada" | "Saida">("Entrada")
   const [valor, setValor] = useState("")
   const [descricao, setDescricao] = useState("")
+  const [categoria, setCategoria] = useState("")
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -27,10 +28,12 @@ export default function FinanceiroPage() {
       tipo,
       valor: parseFloat(valor),
       descricao,
+      categoria: categoria || 'Outros',
     })
     
     setValor("")
     setDescricao("")
+    setCategoria("")
     setIsOpen(false)
   }
 
@@ -73,6 +76,10 @@ export default function FinanceiroPage() {
                 <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Ex: Pagamento Fornecedor" className="rounded-xl border-border/60" required />
               </div>
               <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-muted-foreground">Categoria</label>
+                <Input value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="Ex: Vendas, Contas Fixas..." className="rounded-xl border-border/60" required />
+              </div>
+              <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold text-muted-foreground">Valor (R$)</label>
                 <Input type="number" step="0.01" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="Ex: 150.00" className="rounded-xl border-border/60" required />
               </div>
@@ -85,24 +92,24 @@ export default function FinanceiroPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-         <Card className="bg-white rounded-[2rem] p-6 shadow-sm border border-border/40 relative overflow-hidden">
-            <div className="flex items-center gap-2 text-emerald-500 font-bold mb-4">
-               <ArrowUpCircle size={20} /> Entradas
-            </div>
-            <div className="text-3xl font-black tracking-tighter">{formatCurrency(receitas)}</div>
-         </Card>
-         <Card className="bg-white rounded-[2rem] p-6 shadow-sm border border-border/40 relative overflow-hidden">
-            <div className="flex items-center gap-2 text-destructive font-bold mb-4">
-               <ArrowDownCircle size={20} /> Saídas
-            </div>
-            <div className="text-3xl font-black tracking-tighter">{formatCurrency(despesas)}</div>
-         </Card>
-         <Card className={`rounded-[2rem] p-6 shadow-sm border border-border/40 relative overflow-hidden ${saldo >= 0 ? 'bg-primary text-white' : 'bg-destructive text-white'}`}>
-            <div className="flex items-center gap-2 font-bold mb-4 opacity-80">
-               <Wallet size={20} /> Saldo Total
-            </div>
-            <div className="text-4xl font-black tracking-tighter">{formatCurrency(saldo)}</div>
-         </Card>
+        <Card className="bg-white rounded-[2rem] p-6 shadow-sm border border-border/40 relative overflow-hidden">
+          <div className="flex items-center gap-2 text-emerald-500 font-bold mb-4">
+             <ArrowUpCircle size={20} /> Entradas
+          </div>
+          <div className="text-3xl font-black tracking-tighter">{formatCurrency(receitas)}</div>
+        </Card>
+        <Card className="bg-white rounded-[2rem] p-6 shadow-sm border border-border/40 relative overflow-hidden">
+          <div className="flex items-center gap-2 text-destructive font-bold mb-4">
+             <ArrowDownCircle size={20} /> Saídas
+          </div>
+          <div className="text-3xl font-black tracking-tighter">{formatCurrency(despesas)}</div>
+        </Card>
+        <Card className={`rounded-[2rem] p-6 shadow-sm border border-border/40 relative overflow-hidden ${saldo >= 0 ? 'bg-primary text-white' : 'bg-destructive text-white'}`}>
+          <div className="flex items-center gap-2 font-bold mb-4 opacity-80">
+             <Wallet size={20} /> Saldo Total
+          </div>
+          <div className="text-4xl font-black tracking-tighter">{formatCurrency(saldo)}</div>
+        </Card>
       </div>
 
       <Card className="bg-white rounded-[2rem] p-8 shadow-sm border border-border/40 min-h-[500px]">
@@ -119,6 +126,7 @@ export default function FinanceiroPage() {
               <TableRow>
                 <TableHead className="font-semibold text-muted-foreground">Data/Hora</TableHead>
                 <TableHead className="font-semibold text-muted-foreground">Descrição</TableHead>
+                <TableHead className="font-semibold text-muted-foreground">Categoria</TableHead>
                 <TableHead className="font-semibold text-muted-foreground">Tipo</TableHead>
                 <TableHead className="text-right font-semibold text-muted-foreground">Valor</TableHead>
               </TableRow>
@@ -126,7 +134,7 @@ export default function FinanceiroPage() {
             <TableBody>
               {transacoes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                     Nenhuma transação registrada.
                   </TableCell>
                 </TableRow>
@@ -137,6 +145,11 @@ export default function FinanceiroPage() {
                       {new Date(transacao.data).toLocaleString('pt-BR')}
                     </TableCell>
                     <TableCell className="font-semibold">{transacao.descricao}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="bg-secondary/40 text-foreground/70 border-none font-medium">
+                        {transacao.categoria || 'Outros'}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={`border-border/60 ${transacao.tipo === 'Entrada' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
                         {transacao.tipo}

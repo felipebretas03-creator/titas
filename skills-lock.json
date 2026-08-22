@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "build-dashboard": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "data/skills/build-dashboard/SKILL.md",
+      "computedHash": "978eb2a7d02cfb91967e94f78567464a68aa222c4e95583d1c7a970d89028c00"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "b146008599c31057cef1c145774cea5d5afb30e8f43fa802e47a4b461419aaaf"
+    },
+    "kpi-dashboard-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/business-analytics/skills/kpi-dashboard-design/SKILL.md",
+      "computedHash": "d886fe70e98d7555ece81ae8c53579f0fd4a0042c646cf88a1054651ce14fb72"
+    },
+    "recharts": {
+      "source": "andy-spike/skills",
+      "sourceType": "github",
+      "skillPath": "skills/recharts/SKILL.md",
+      "computedHash": "a34ecf6ee1664a089e800a7cec095e114c6c3e8a11a06d3dfe98a39aac13f70c"
+    },
+    "report-generator": {
+      "source": "claude-office-skills/skills",
+      "sourceType": "github",
+      "skillPath": "report-generator/SKILL.md",
+      "computedHash": "a1d8f43dcdb5fd1d2d92bfb8f53fe37065b121b16b3609b54d700f12b0f94450"
+    }
+  }
+}

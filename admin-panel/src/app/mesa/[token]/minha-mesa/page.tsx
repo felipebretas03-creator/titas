@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { toast } from "sonner"
-import { ChevronLeft, Receipt, Bell, Utensils, CheckCircle2, Clock, AlertCircle, ChefHat } from "lucide-react"
+import { ChevronLeft, Receipt, Bell, Utensils, CheckCircle2, Clock, AlertCircle, ChefHat, HelpCircle, MessageSquareWarning, Trash2, MoreHorizontal, Send } from "lucide-react"
 import { useState, useEffect } from "react"
 
 export default function MinhaMesaTablet() {
@@ -21,6 +21,9 @@ export default function MinhaMesaTablet() {
   const config = store.configuracoesTablet
   
   const [isConfirmBillOpen, setIsConfirmBillOpen] = useState(false)
+  const [isCallWaiterOpen, setIsCallWaiterOpen] = useState(false)
+  const [showOtherInput, setShowOtherInput] = useState(false)
+  const [otherMessage, setOtherMessage] = useState("")
 
   useEffect(() => {
     if (!table || !session) {
@@ -33,12 +36,18 @@ export default function MinhaMesaTablet() {
   }
 
   const handleCallWaiter = () => {
+    setIsCallWaiterOpen(true)
+  }
+
+  const submitCallWaiter = (type: 'WAITER' | 'NAPKINS' | 'CUTLERY' | 'ORDER_QUESTION' | 'ORDER_PROBLEM' | 'OTHER', customMessage?: string) => {
     store.addSolicitacaoAtendimento({
       tableId: table.id,
       sessionId: session.id,
-      type: 'WAITER'
+      type,
+      message: customMessage
     })
     store.updateMesa(table.id, { status: 'SERVICE_REQUESTED' })
+    setIsCallWaiterOpen(false)
     toast.success("Atendimento solicitado! Um atendente irá até sua mesa.")
   }
 
@@ -212,6 +221,114 @@ export default function MinhaMesaTablet() {
               Cancelar e Voltar
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isCallWaiterOpen} onOpenChange={(open) => {
+        setIsCallWaiterOpen(open);
+        if (!open) {
+          setTimeout(() => {
+            setShowOtherInput(false);
+            setOtherMessage("");
+          }, 300);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[500px] rounded-3xl p-8">
+          <DialogHeader className="gap-2 text-center mb-4">
+            <div className="mx-auto bg-amber-100 w-16 h-16 flex items-center justify-center rounded-full">
+              <Bell size={32} className="text-amber-600" />
+            </div>
+            <DialogTitle className="text-2xl font-black">Como podemos ajudar?</DialogTitle>
+          </DialogHeader>
+          
+          {!showOtherInput ? (
+            <div className="grid grid-cols-2 gap-4">
+              <Button 
+                onClick={() => submitCallWaiter('NAPKINS')} 
+                variant="outline" 
+                className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 hover:border-blue-500 hover:bg-blue-50"
+              >
+                <Receipt size={28} className="text-blue-600" />
+                <span className="font-bold whitespace-normal text-center">Guardanapos</span>
+              </Button>
+              <Button 
+                onClick={() => submitCallWaiter('CUTLERY')} 
+                variant="outline" 
+                className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 hover:border-emerald-500 hover:bg-emerald-50"
+              >
+                <Utensils size={28} className="text-emerald-600" />
+                <span className="font-bold whitespace-normal text-center">Talheres</span>
+              </Button>
+              <Button 
+                onClick={() => submitCallWaiter('ORDER_QUESTION')} 
+                variant="outline" 
+                className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 hover:border-purple-500 hover:bg-purple-50"
+              >
+                <HelpCircle size={28} className="text-purple-600" />
+                <span className="font-bold whitespace-normal text-center">Dúvida no Pedido</span>
+              </Button>
+              <Button 
+                onClick={() => submitCallWaiter('ORDER_PROBLEM')} 
+                variant="outline" 
+                className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 hover:border-rose-500 hover:bg-rose-50"
+              >
+                <MessageSquareWarning size={28} className="text-rose-600" />
+                <span className="font-bold whitespace-normal text-center">Problema no Pedido</span>
+              </Button>
+              <Button 
+                onClick={() => submitCallWaiter('OTHER', 'Limpar Mesa')} 
+                variant="outline" 
+                className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 hover:border-slate-500 hover:bg-slate-50"
+              >
+                <Trash2 size={28} className="text-slate-600" />
+                <span className="font-bold whitespace-normal text-center">Limpar Mesa</span>
+              </Button>
+              <Button 
+                onClick={() => setShowOtherInput(true)} 
+                variant="outline" 
+                className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 hover:border-amber-500 hover:bg-amber-50"
+              >
+                <MoreHorizontal size={28} className="text-amber-600" />
+                <span className="font-bold whitespace-normal text-center">Outros...</span>
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-4">
+              <p className="text-center font-medium text-muted-foreground">Digite abaixo o que você precisa:</p>
+              <textarea 
+                className="w-full min-h-[120px] p-4 rounded-2xl border-2 border-border resize-none focus:outline-none focus:border-primary text-lg"
+                placeholder="Ex: Preciso de gelo extra..."
+                value={otherMessage}
+                onChange={(e) => setOtherMessage(e.target.value)}
+                autoFocus
+              />
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => setShowOtherInput(false)} 
+                  variant="outline" 
+                  className="flex-1 h-14 rounded-xl font-bold text-lg"
+                >
+                  Voltar
+                </Button>
+                <Button 
+                  onClick={() => submitCallWaiter('OTHER', otherMessage)} 
+                  disabled={!otherMessage.trim()}
+                  className="flex-1 h-14 rounded-xl font-bold text-lg bg-amber-500 hover:bg-amber-600 text-white gap-2"
+                >
+                  <Send size={20} />
+                  Enviar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {!showOtherInput && (
+            <DialogFooter className="mt-6">
+              <Button onClick={() => setIsCallWaiterOpen(false)} variant="ghost" className="w-full h-14 text-lg font-bold rounded-xl">
+                Cancelar
+              </Button>
+            </DialogFooter>
+          )}
         </DialogContent>
       </Dialog>
     </div>

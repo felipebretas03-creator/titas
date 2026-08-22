@@ -15,3 +15,14 @@ Para este projeto, você deve seguir rigorosamente as regras definidas nos segui
   - **Performance e Segurança:** Otimizar para a Vercel (bundle, imagens, cache, SSR/SSG/ISR). Nunca expor *secrets* ou tokens no frontend.
   - **Git e UX:** Não quebrar ou remover funcionalidades sem pedir. Focar em interfaces responsivas, acessíveis e com bom feedback visual (loading/error).
   - **Boas Práticas de Trabalho:** Nunca criar código desnecessário, logs no final (remover console.logs) ou assumir decisões importantes sem autorização. Antes de codar, planeje. Antes de entregar, verifique Typescript, ESLint, imports, responsividade, etc.
+
+## 3. Fluxo de Git Rigoroso
+- Execute `git status` e `git fetch origin`.
+- Verifique se a branch está atualizada e **nunca descarte alterações locais**.
+- **Nunca** utilize `git reset --hard` sem autorização.
+- **Nunca** utilize `git push --force`.
+- **Nunca** faça commit ou push diretamente na `main`.
+- **Trabalhe sempre em uma feature branch.**
+- Antes do commit: executar lint, executar testes e verificar git diff.
+- Gere commits objetivos e descritivos.
+- Faça push **somente da branch atual**.

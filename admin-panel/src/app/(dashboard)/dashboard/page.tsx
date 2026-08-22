@@ -1,22 +1,145 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Activity, Clock, FileWarning, TrendingUp, Filter, MoreHorizontal } from "lucide-react"
 import { useStore } from "@/store"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Cell } from "recharts"
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
+
+const formatCurrency = (val: number) => `R$ ${val.toFixed(2).replace('.', ',')}`;
 
 export default function DashboardPage() {
-  const { produtos, usuarios } = useStore()
+  const { pedidos, sessoesMesa } = useStore()
   
-  // Fake metrics for demonstration, combining real data length
-  const totalFaturamento = "R$ 4,2k"
-  const totalPedidos = 142 + produtos.length
-  const rejectRate = "2,1%"
-  const pendentes = 8 + usuarios.length
-
+  const [periodo, setPeriodo] = useState<string>("Hoje")
+  const [canal, setCanal] = useState<string>("Todas")
   const [selectedOrder, setSelectedOrder] = useState<{titulo: string, status: string, tempo: string, itens: string[]} | null>(null)
+
+  // 1. Filtro Global
+  const filteredPedidos = useMemo(() => {
+    const now = new Date()
+    return pedidos.filter(p => {
+      // Filtro de Canal
+      if (canal === "Delivery" && p.channel !== "DELIVERY") return false;
+      if (canal === "Salão" && p.channel !== "TABLE") return false;
+      if (canal === "Retirada" && p.channel !== "PICKUP") return false;
+
+      // Filtro de Período
+      if (periodo !== "Todas") {
+        const pDate = new Date(p.createdAt)
+        const diffTime = Math.abs(now.getTime() - pDate.getTime())
+        const diffDays = diffTime / (1000 * 60 * 60 * 24)
+
+        if (periodo === "Hoje" && diffDays > 1) return false;
+        if (periodo === "7d" && diffDays > 7) return false;
+        if (periodo === "30d" && diffDays > 30) return false;
+      }
+      
+      return true
+    })
+  }, [pedidos, periodo, canal])
+
+  // 2. Cálculos dos KPIs
+  const pedidosValidos = filteredPedidos.filter(p => p.status !== 'CANCELLED')
+  const totalFaturamento = pedidosValidos.reduce((acc, p) => acc + p.total, 0)
+  const totalPedidos = pedidosValidos.length
+  
+  const totalCancelados = filteredPedidos.filter(p => p.status === 'CANCELLED').length
+  const taxaRejeicao = filteredPedidos.length > 0 ? (totalCancelados / filteredPedidos.length) * 100 : 0
+  
+  const pedidosComTempo = pedidosValidos.filter(p => p.tempoEntregaMins)
+  const tempoMedioMins = pedidosComTempo.length > 0 
+    ? Math.round(pedidosComTempo.reduce((acc, p) => acc + (p.tempoEntregaMins || 0), 0) / pedidosComTempo.length) 
+    : 0
+  const tempoMedioStr = tempoMedioMins > 0 ? `${tempoMedioMins}m` : "0m"
+
+  // 3. Dados Faturamento (AreaChart)
+  const faturamentoData = useMemo(() => {
+    const map: Record<string, { faturamento: number, pedidos: number }> = {}
+    
+    // Para criar um gráfico bonitinho mesmo com poucos dados (mock smooth lines)
+    if (pedidosValidos.length === 0) {
+      return [{ time: "0h", faturamento: 0, pedidos: 0 }, { time: "24h", faturamento: 0, pedidos: 0 }]
+    }
+
+    pedidosValidos.forEach(p => {
+      const d = new Date(p.createdAt)
+      const key = periodo === "Hoje" 
+        ? `${d.getHours().toString().padStart(2, '0')}h` 
+        : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+        
+      if (!map[key]) map[key] = { faturamento: 0, pedidos: 0 }
+      map[key].faturamento += p.total
+      map[key].pedidos += 1
+    })
+    
+    // Sorting temporally
+    return Object.entries(map)
+      .map(([time, data]) => ({ time, ...data }))
+      .sort((a,b) => a.time.localeCompare(b.time))
+  }, [pedidosValidos, periodo])
+
+  // 4. Dados Operação (BarChart de Distribuição de Tempos)
+  const operacaoData = useMemo(() => {
+    const faixas = { "<20m": 0, "20-30m": 0, "30-45m": 0, ">45m": 0 }
+    pedidosComTempo.forEach(p => {
+      const t = p.tempoEntregaMins || 0
+      if (t < 20) faixas["<20m"]++
+      else if (t <= 30) faixas["20-30m"]++
+      else if (t <= 45) faixas["30-45m"]++
+      else faixas[">45m"]++
+    })
+    return Object.entries(faixas).map(([faixa, count]) => ({ faixa, count }))
+  }, [pedidosComTempo])
+
+  // 5. Dados Fluxo Produção (BarChart Produzidos vs Pendentes)
+  const fluxoProducaoData = useMemo(() => {
+    const map: Record<string, { produzidos: number, pendentes: number }> = {}
+    filteredPedidos.forEach(p => {
+      const d = new Date(p.createdAt)
+      const key = `${d.getHours().toString().padStart(2, '0')}h`
+      if (!map[key]) map[key] = { produzidos: 0, pendentes: 0 }
+      
+      if (['DELIVERED'].includes(p.status)) {
+        map[key].produzidos += 1
+      } else if (['PENDING', 'CONFIRMED', 'PREPARING', 'READY'].includes(p.status)) {
+        map[key].pendentes += 1
+      }
+    })
+    return Object.entries(map)
+      .map(([hora, data]) => ({ hora, ...data }))
+      .sort((a,b) => a.hora.localeCompare(b.hora))
+      .slice(-8)
+  }, [filteredPedidos])
+
+  const totalProduzidos = fluxoProducaoData.reduce((acc, curr) => acc + curr.produzidos, 0)
+  const totalFluxoPendentes = fluxoProducaoData.reduce((acc, curr) => acc + curr.pendentes, 0)
+
+  // 6. Fila do Caixa
+  const filaPedidos = useMemo(() => {
+    return pedidos
+      .filter(p => ['PENDING', 'CONFIRMED', 'PREPARING', 'READY'].includes(p.status))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 6)
+  }, [pedidos])
+
+  // Configurações do Recharts
+  const chartConfigFat = {
+    faturamento: { label: "Faturamento (R$)", color: "hsl(var(--primary))" },
+    pedidos: { label: "Pedidos", color: "#eab308" }
+  }
+
+  const chartConfigFluxo = {
+    produzidos: { label: "Produzidos", color: "hsl(var(--primary))" },
+    pendentes: { label: "Pendentes", color: "#eab308" }
+  }
+
+  const chartConfigOp = {
+    count: { label: "Pedidos", color: "hsl(var(--primary))" }
+  }
 
   return (
     <div className="flex flex-col gap-8 pb-10">
@@ -28,7 +151,7 @@ export default function DashboardPage() {
         </h1>
         <div className="flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-4 w-full md:w-auto">
           <div className="flex-1 md:w-[140px] min-w-[120px]">
-            <Select defaultValue="Hoje">
+            <Select value={periodo} onValueChange={setPeriodo}>
               <SelectTrigger className="bg-white rounded-full border-border/50 h-11 px-4 md:px-5 shadow-sm font-bold text-foreground w-full">
                 <SelectValue placeholder="Data" />
               </SelectTrigger>
@@ -36,20 +159,21 @@ export default function DashboardPage() {
                 <SelectItem value="Hoje">Hoje</SelectItem>
                 <SelectItem value="7d">Últimos 7 dias</SelectItem>
                 <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                <SelectItem value="Todas">Todo Período</SelectItem>
               </SelectContent>
             </Select>
           </div>
           
           <div className="flex-1 md:w-[160px] min-w-[120px]">
-            <Select defaultValue="Todas">
+            <Select value={canal} onValueChange={setCanal}>
               <SelectTrigger className="bg-white rounded-full border-border/50 h-11 px-4 md:px-5 shadow-sm font-bold text-foreground w-full">
                 <SelectValue placeholder="Plataforma" />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
                 <SelectItem value="Todas">Todas</SelectItem>
-                <SelectItem value="iFood">iFood</SelectItem>
-                <SelectItem value="Salao">Salão</SelectItem>
-                <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                <SelectItem value="Delivery">Delivery</SelectItem>
+                <SelectItem value="Salão">Salão</SelectItem>
+                <SelectItem value="Retirada">Retirada</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -71,16 +195,16 @@ export default function DashboardPage() {
             
             {/* Card Faturamento */}
             <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-border/40 flex flex-col justify-between h-[280px] md:h-[300px] relative overflow-hidden">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between z-20">
                 <span className="text-xs md:text-sm font-bold uppercase tracking-wider text-muted-foreground">Faturamento</span>
                 <MoreHorizontal size={20} className="text-muted-foreground cursor-pointer hover:text-foreground" />
               </div>
               
-              <div className="flex items-end gap-6 md:gap-10 mt-6 z-10">
+              <div className="flex items-end gap-6 md:gap-10 mt-6 z-20">
                 <div>
                   <div className="text-emerald-500 flex items-center mb-1 md:mb-2"><TrendingUp size={16} /></div>
-                  <div className="text-3xl md:text-4xl font-black tracking-tighter">{totalFaturamento}</div>
-                  <div className="text-[10px] md:text-xs font-medium text-muted-foreground mt-1">Bruto Hoje</div>
+                  <div className="text-3xl md:text-4xl font-black tracking-tighter">{formatCurrency(totalFaturamento).replace(',00', '')}</div>
+                  <div className="text-[10px] md:text-xs font-medium text-muted-foreground mt-1">Líquido</div>
                 </div>
                 <div>
                   <div className="text-amber-500 flex items-center mb-1 md:mb-2"><Activity size={16} /></div>
@@ -89,12 +213,25 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* Mock de Gráfico de Linha Simplificado */}
-              <div className="absolute bottom-0 left-0 right-0 h-24 opacity-60">
-                 <svg viewBox="0 0 400 100" preserveAspectRatio="none" className="w-full h-full">
-                    <path d="M0,80 Q50,20 100,60 T200,40 T300,70 T400,30" fill="none" stroke="#955251" strokeWidth="4" />
-                    <path d="M0,90 Q80,50 150,80 T250,50 T350,90 T400,60" fill="none" stroke="#eab308" strokeWidth="2" />
-                 </svg>
+              {/* AreaChart Recharts */}
+              <div className="absolute bottom-0 left-0 right-0 h-40 opacity-80 z-10 pointer-events-none">
+                <ChartContainer config={chartConfigFat} className="h-full w-full">
+                  <AreaChart data={faturamentoData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorFaturamento" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--color-faturamento)" stopOpacity={0.5}/>
+                        <stop offset="95%" stopColor="var(--color-faturamento)" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorPedidos" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--color-pedidos)" stopOpacity={0.5}/>
+                        <stop offset="95%" stopColor="var(--color-pedidos)" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <RechartsTooltip content={<ChartTooltipContent />} />
+                    <Area type="monotone" dataKey="faturamento" stroke="var(--color-faturamento)" strokeWidth={3} fill="url(#colorFaturamento)" />
+                    <Area type="monotone" dataKey="pedidos" stroke="var(--color-pedidos)" strokeWidth={2} fill="url(#colorPedidos)" />
+                  </AreaChart>
+                </ChartContainer>
               </div>
             </div>
 
@@ -108,182 +245,148 @@ export default function DashboardPage() {
               <div className="flex items-end gap-6 md:gap-10 mt-6">
                 <div>
                   <div className="text-primary flex items-center mb-1 md:mb-2"><Clock size={16} /></div>
-                  <div className="text-3xl md:text-4xl font-black tracking-tighter">4m 12s</div>
+                  <div className="text-3xl md:text-4xl font-black tracking-tighter">{tempoMedioStr}</div>
                   <div className="text-[10px] md:text-xs font-medium text-muted-foreground mt-1">Tempo Médio</div>
                 </div>
                 <div>
                   <div className="text-destructive flex items-center mb-1 md:mb-2"><FileWarning size={16} /></div>
-                  <div className="text-3xl md:text-4xl font-black tracking-tighter">{rejectRate}</div>
+                  <div className="text-3xl md:text-4xl font-black tracking-tighter">{taxaRejeicao.toFixed(1)}%</div>
                   <div className="text-[10px] md:text-xs font-medium text-muted-foreground mt-1">Rejeição</div>
                 </div>
               </div>
 
-              {/* Mock de Dots */}
-              <div className="mt-auto flex flex-col gap-2 pt-6">
-                <div className="flex gap-2 justify-between">
-                  {[...Array(12)].map((_, i) => (
-                    <div key={`d1-${i}`} className={`w-3 h-3 rounded-full ${i % 3 === 0 ? 'bg-primary' : 'bg-primary/20'}`}></div>
-                  ))}
-                </div>
-                <div className="flex gap-2 justify-between">
-                  {[...Array(12)].map((_, i) => (
-                    <div key={`d2-${i}`} className={`w-3 h-3 rounded-full ${i % 2 === 0 ? 'bg-amber-400' : 'bg-secondary'}`}></div>
-                  ))}
-                </div>
+              {/* BarChart (Distribuição Tempos) */}
+              <div className="mt-auto h-24 pt-4 w-full relative">
+                <ChartContainer config={chartConfigOp} className="h-full w-full">
+                  <BarChart data={operacaoData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+                    <RechartsTooltip content={<ChartTooltipContent />} cursor={{fill: 'transparent'}} />
+                    <XAxis dataKey="faixa" axisLine={false} tickLine={false} tick={{fontSize: 10, fill: '#94a3b8'}} />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]} barSize={16}>
+                      {operacaoData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={
+                          index === 0 ? '#10b981' : 
+                          index === 1 ? '#3b82f6' : 
+                          index === 2 ? '#f59e0b' : 
+                          '#ef4444'
+                        } />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
               </div>
             </div>
 
           </div>
 
-          {/* Linha Inferior (Gráfico de Barras Longo) */}
-          <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-border/40 h-[380px] flex flex-col relative overflow-hidden">
-             <div className="flex items-center justify-between">
+          {/* Linha Inferior (Fluxo Produção) */}
+          <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-border/40 min-h-[380px] flex flex-col overflow-hidden">
+             <div className="flex items-center justify-between mb-4">
                 <span className="text-xs md:text-sm font-bold uppercase tracking-wider text-muted-foreground">Fluxo de Produção</span>
                 <MoreHorizontal size={20} className="text-muted-foreground cursor-pointer hover:text-foreground" />
               </div>
               
-              {/* Fake Bar Chart */}
-              <div className="flex-1 flex items-end justify-between gap-2 mt-8 pb-8 px-4 border-b border-border/50 relative">
-                 {/* Background Lines */}
-                 <div className="absolute inset-x-0 bottom-8 top-0 flex flex-col justify-between z-0">
-                    <div className="border-t border-border/30 w-full"></div>
-                    <div className="border-t border-border/30 w-full"></div>
-                    <div className="border-t border-border/30 w-full"></div>
-                    <div className="border-t border-border/30 w-full"></div>
-                 </div>
-
-                 {/* Bars */}
-                 {[40, 70, 45, 80, 50, 90, 60, 40, 85].map((h, i) => (
-                    <div key={i} className="relative z-10 flex flex-col items-center gap-2 group cursor-pointer">
-                      <div 
-                        className="w-12 bg-primary/20 group-hover:bg-primary/40 rounded-full transition-colors flex items-end justify-center pb-2" 
-                        style={{ height: `${h}%` }}
-                      >
-                         <div className="w-8 bg-primary rounded-full" style={{ height: `${h * 0.7}%` }}></div>
-                      </div>
-                      <div className="w-8 h-8 rounded-full bg-white border border-border/50 shadow-sm flex items-center justify-center text-xs font-bold z-20 absolute -bottom-4">
-                        {h}
-                      </div>
-                    </div>
-                 ))}
+              <div className="flex-1 w-full min-h-[220px]">
+                <ChartContainer config={chartConfigFluxo} className="h-full w-full">
+                  <BarChart data={fluxoProducaoData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="hora" axisLine={false} tickLine={false} tickMargin={10} tick={{fill: '#94a3b8'}} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8'}} />
+                    <RechartsTooltip content={<ChartTooltipContent />} cursor={{fill: 'var(--color-primary)', opacity: 0.05}} />
+                    <Bar dataKey="produzidos" radius={[4, 4, 0, 0]} fill="var(--color-produzidos)" barSize={12} />
+                    <Bar dataKey="pendentes" radius={[4, 4, 0, 0]} fill="var(--color-pendentes)" barSize={12} />
+                  </BarChart>
+                </ChartContainer>
               </div>
               
               {/* Legenda */}
-              <div className="flex items-center justify-between mt-6 px-4">
+              <div className="flex items-center justify-between mt-6 px-4 pt-4 border-t border-border/40">
                  <div className="flex gap-6">
                     <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                      <div className="w-3 h-3 rounded-full bg-primary border-2 border-primary/20"></div> Produzidos
+                      <div className="w-3 h-3 rounded-full bg-primary border-2 border-primary/20"></div> Produzidos ({totalProduzidos})
                     </div>
                     <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
-                      <div className="w-3 h-3 rounded-full bg-amber-400 border-2 border-amber-400/20"></div> Pendentes
+                      <div className="w-3 h-3 rounded-full bg-amber-400 border-2 border-amber-400/20"></div> Pendentes ({totalFluxoPendentes})
                     </div>
                  </div>
-                 <div className="text-sm font-bold text-foreground">Total: <span className="text-primary">{totalPedidos * 8}</span></div>
+                 <div className="text-sm font-bold text-foreground">Total: <span className="text-primary">{totalProduzidos + totalFluxoPendentes}</span></div>
               </div>
           </div>
           
         </div>
 
-        {/* Coluna Direita (1/3) - Timeline */}
+        {/* Coluna Direita (1/3) - Fila do Caixa */}
         <div className="xl:col-span-1 bg-white rounded-[2rem] p-8 shadow-sm border border-border/40 min-h-[700px] flex flex-col">
           <div className="flex items-center justify-between mb-8">
-            <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Fila do Caixa</span>
+            <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+              Fila do Caixa
+              <span className="bg-destructive/10 text-destructive text-[10px] px-2 py-0.5 rounded-full">{filaPedidos.length} pendentes</span>
+            </span>
             <MoreHorizontal size={20} className="text-muted-foreground cursor-pointer hover:text-foreground" />
           </div>
 
-          <div className="flex-1 relative">
-             {/* Eixo Y */}
-             <div className="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-[10px] font-bold text-muted-foreground/70 pr-4 w-12 text-right z-10 bg-white">
-                <span>15:30</span>
-                <span>15:15</span>
-                <span>15:00</span>
-                <span>14:45</span>
-                <span>14:30</span>
-                <span>14:15</span>
-             </div>
+          <div className="flex-1 relative mt-4">
+             {filaPedidos.length === 0 ? (
+               <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                 <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                    🎉
+                 </div>
+                 <p className="font-bold text-sm">Tudo tranquilo!</p>
+                 <p className="text-xs">Nenhum pedido na fila.</p>
+               </div>
+             ) : (
+               <div className="flex flex-col gap-6 ml-4 border-l-2 border-border/40 pl-6 py-4 relative">
+                  {filaPedidos.map((pedido) => {
+                    const d = new Date(pedido.createdAt)
+                    const time = `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
+                    
+                    let badge = { bg: "bg-slate-100", text: "text-slate-600", letter: "O", ring: "ring-slate-400" }
+                    let title = `Pedido #${pedido.id.slice(0,4)}`
+                    
+                    if (pedido.channel === 'DELIVERY') {
+                       badge = { bg: "bg-blue-100", text: "text-blue-600", letter: "D", ring: "ring-blue-400" }
+                       title = `Delivery #${pedido.id.slice(0,4)}`
+                    } else if (pedido.channel === 'TABLE') {
+                       badge = { bg: "bg-emerald-100", text: "text-emerald-700", letter: "M", ring: "ring-emerald-400" }
+                       title = `Mesa ${pedido.tableId}`
+                    } else if (pedido.channel === 'PICKUP') {
+                       badge = { bg: "bg-amber-100", text: "text-amber-700", letter: "R", ring: "ring-amber-400" }
+                       title = `Retirada #${pedido.id.slice(0,4)}`
+                    }
 
-             {/* Grid and Gantt Items */}
-             <div className="absolute left-12 right-0 top-0 bottom-8 border-l border-border/50 z-20 flex flex-col">
-                <div className="flex-1 border-b border-border/20 border-dashed relative">
-                   <div 
-                     onClick={() => {
-                        toast("Abrindo detalhes da Mesa 16...")
-                        setSelectedOrder({ titulo: "Mesa 16", status: "Em Preparo", tempo: "15:30", itens: ["2x X-Burger Clássico", "1x Batata Frita G"] })
-                     }} 
-                     className="absolute right-4 top-1/2 -translate-y-1/2 bg-emerald-100 text-emerald-700 h-10 w-[70%] rounded-full flex items-center px-4 font-bold text-xs justify-between shadow-sm border border-emerald-200 cursor-pointer hover:ring-2 ring-emerald-400 transition-all"
-                   >
-                     <span className="w-6 h-6 rounded-full bg-white flex items-center justify-center">D</span>
-                     <span>Mesa 16</span>
-                   </div>
-                </div>
-                <div className="flex-1 border-b border-border/20 border-dashed relative">
-                   <div 
-                     onClick={() => setSelectedOrder({ titulo: "iFood 29", status: "Na Fila", tempo: "15:15", itens: ["1x Combo Master", "1x Refrigerante Lata"] })} 
-                     className="absolute right-10 top-1/2 -translate-y-1/2 bg-amber-100 text-amber-700 h-10 w-[60%] rounded-full flex items-center px-4 font-bold text-xs justify-between shadow-sm border border-amber-200 cursor-pointer hover:ring-2 ring-amber-400 transition-all"
-                   >
-                     <span className="w-6 h-6 rounded-full bg-white flex items-center justify-center">i</span>
-                     <span>iFood 29</span>
-                   </div>
-                </div>
-                <div className="flex-1 border-b border-border/20 border-dashed relative">
-                   <div 
-                     onClick={() => setSelectedOrder({ titulo: "Balcão 15", status: "Em Preparo", tempo: "15:00", itens: ["1x X-Salada", "1x Suco Natural"] })} 
-                     className="absolute left-10 top-1/2 -translate-y-1/2 bg-white text-foreground h-10 w-[50%] rounded-full flex items-center px-4 font-bold text-xs justify-between shadow-sm border border-border cursor-pointer hover:ring-2 ring-primary/40 transition-all"
-                   >
-                     <div className="flex -space-x-2">
-                       <div className="w-6 h-6 rounded-full bg-primary/20 border border-white z-20"></div>
-                       <div className="w-6 h-6 rounded-full bg-primary/40 border border-white z-10"></div>
-                     </div>
-                     <span>Balcão 15</span>
-                   </div>
-                </div>
-                <div className="flex-1 border-b border-border/20 border-dashed relative">
-                   <div 
-                     onClick={() => setSelectedOrder({ titulo: "Mesa 21", status: "Aguardando Retirada", tempo: "14:45", itens: ["4x Chopp Pilsen", "1x Porção de Fritas"] })} 
-                     className="absolute right-2 top-1/2 -translate-y-1/2 bg-emerald-100 text-emerald-700 h-10 w-[80%] rounded-full flex items-center px-4 font-bold text-xs justify-between shadow-sm border border-emerald-200 cursor-pointer hover:ring-2 ring-emerald-400 transition-all"
-                   >
-                     <span className="w-6 h-6 rounded-full bg-white flex items-center justify-center text-primary">🍔</span>
-                     <span>Mesa 21</span>
-                   </div>
-                </div>
-                <div className="flex-1 border-b border-border/20 border-dashed relative">
-                   <div 
-                     onClick={() => setSelectedOrder({ titulo: "WhatsApp 10", status: "Em Trânsito (Motoboy)", tempo: "14:30", itens: ["2x X-Tudo", "1x Guaraná 2L"] })} 
-                     className="absolute left-4 top-1/2 -translate-y-1/2 bg-white text-foreground h-10 w-[40%] rounded-full flex items-center px-4 font-bold text-xs justify-between shadow-sm border border-border cursor-pointer hover:ring-2 ring-blue-400 transition-all"
-                   >
-                     <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">W</span>
-                     <span>WhatsApp 10</span>
-                   </div>
-                </div>
-                <div className="flex-1 relative">
-                   <div 
-                     onClick={() => setSelectedOrder({ titulo: "Telefone 08", status: "Entregue", tempo: "14:15", itens: ["1x Pizza Calabresa"] })} 
-                     className="absolute left-1/4 top-1/2 -translate-y-1/2 bg-white text-foreground h-10 w-[60%] rounded-full flex items-center px-4 font-bold text-xs justify-between shadow-sm border border-border cursor-pointer hover:ring-2 ring-sky-400 transition-all"
-                   >
-                     <span className="w-6 h-6 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center">T</span>
-                     <span>Telefone 08</span>
-                   </div>
-                </div>
-             </div>
-             
-             {/* Eixo X inferior */}
-             <div className="absolute left-12 right-0 bottom-0 h-8 flex items-end justify-between px-4 text-[10px] font-bold text-muted-foreground/70">
-                <span>0</span>
-                <span>5</span>
-                <span>10</span>
-                <span>15</span>
-                <span>20</span>
-                <span>25</span>
-                <span>30</span>
-             </div>
+                    return (
+                      <div key={pedido.id} className="relative">
+                        {/* Timeline Dot */}
+                        <div className={`absolute -left-[31px] top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border-[3px] border-white ${badge.bg} z-10 shadow-sm`}></div>
+                        
+                        {/* Card */}
+                        <div 
+                          onClick={() => setSelectedOrder({
+                             titulo: title,
+                             status: pedido.status,
+                             tempo: time,
+                             itens: pedido.items.map(i => `${i.quantidade}x ${i.nome}`)
+                          })}
+                          className={`bg-white h-14 rounded-2xl flex items-center px-4 font-bold text-xs justify-between shadow-sm border border-border/50 cursor-pointer hover:ring-2 ${badge.ring} hover:border-transparent transition-all group`}
+                        >
+                           <div className="flex items-center gap-3">
+                             <span className={`w-8 h-8 rounded-full ${badge.bg} ${badge.text} flex items-center justify-center shadow-inner`}>{badge.letter}</span>
+                             <span className="text-sm">{title}</span>
+                           </div>
+                           <span className="text-muted-foreground group-hover:text-foreground transition-colors">{time}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+               </div>
+             )}
           </div>
           
-          <div className="mt-6 flex items-center justify-between text-xs font-bold">
+          <div className="mt-8 pt-6 border-t border-border/40 flex items-center justify-between text-xs font-bold flex-wrap gap-4">
             <div className="flex gap-4">
-              <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> Salão</span>
-              <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-amber-500"></div> App</span>
+              <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> Mesas</span>
+              <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Delivery</span>
+              <span className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-amber-500"></div> Retirada</span>
             </div>
-            <div className="text-foreground">Total: <span className="text-primary">{pendentes} pendentes</span></div>
           </div>
 
         </div>
@@ -292,7 +395,6 @@ export default function DashboardPage() {
 
       <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
           <DialogContent className="sm:max-w-[425px] rounded-[2rem] p-0 border-border/40 overflow-hidden">
-            {/* Header da Modal */}
             <div className="bg-popover p-6 border-b border-border/40 flex items-center justify-between">
               <div className="flex flex-col">
                 <DialogTitle className="text-2xl font-black text-foreground">
@@ -306,7 +408,6 @@ export default function DashboardPage() {
               </div>
             </div>
             
-            {/* Itens do Pedido */}
             <div className="p-6 bg-[#fcfbfb]">
               <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">Itens do Pedido</h4>
               <div className="flex flex-col gap-3">
