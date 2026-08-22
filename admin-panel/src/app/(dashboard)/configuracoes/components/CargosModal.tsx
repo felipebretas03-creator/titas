@@ -45,7 +45,7 @@ export function CargosModal({ isOpen, onClose }: Props) {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[550px] rounded-[1.5rem] p-6">
+      <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto rounded-[1.5rem] p-6">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold">Cargos e Funções</DialogTitle>
         </DialogHeader>
