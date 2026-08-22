@@ -223,7 +223,7 @@ interface AppState {
   updateProduto: (id: string, data: Partial<Produto>) => void;
   deleteProduto: (id: string) => void;
 
-  addMercadoria: (data: Omit<Mercadoria, 'id'>) => void;
+  addMercadoria: (data: Omit<Mercadoria, 'id'> & { id?: string }) => void;
   updateMercadoria: (id: string, data: Partial<Mercadoria>) => void;
   deleteMercadoria: (id: string) => void;
   
@@ -423,7 +423,7 @@ export const useStore = create<AppState>()(
       })),
       deleteProduto: (id) => set((state) => ({ produtos: state.produtos.filter(p => p.id !== id) })),
 
-      addMercadoria: (data) => set((state) => ({ mercadorias: [...state.mercadorias, { ...data, id: generateId() }] })),
+      addMercadoria: (data) => set((state) => ({ mercadorias: [...state.mercadorias, { ...data, id: data.id || generateId() }] })),
       updateMercadoria: (id, data) => set((state) => ({
         mercadorias: state.mercadorias.map(m => m.id === id ? { ...m, ...data } : m)
       })),

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useStore } from "@/store"
+import { useStore, generateId } from "@/store"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,6 +40,11 @@ export default function CadastrosPage() {
   const [custoMerc, setCustoMerc] = useState("")
   const [estoqueAtualMerc, setEstoqueAtualMerc] = useState("")
   const [estoqueMinMerc, setEstoqueMinMerc] = useState("")
+
+  // Mercadoria como Produto
+  const [isTambemProduto, setIsTambemProduto] = useState(false)
+  const [precoVendaMerc, setPrecoVendaMerc] = useState("")
+  const [categoriaMerc, setCategoriaMerc] = useState("")
 
   const handleAddReceitaItem = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -84,8 +89,12 @@ export default function CadastrosPage() {
   const handleSubmitMercadoria = (e: React.FormEvent) => {
     e.preventDefault()
     if (!nomeMerc || !unidadeMerc || !custoMerc) return
+    if (isTambemProduto && (!precoVendaMerc || !categoriaMerc)) return
+    
+    const newMercId = generateId()
     
     addMercadoria({
+      id: newMercId,
       nome: nomeMerc,
       unidadeMedida: unidadeMerc,
       custo: parseFloat(custoMerc),
@@ -93,12 +102,29 @@ export default function CadastrosPage() {
       estoqueMinimo: parseFloat(estoqueMinMerc || "0"),
       status: "Ativo"
     })
+
+    if (isTambemProduto) {
+      addProduto({
+        nome: nomeMerc,
+        preco: parseFloat(precoVendaMerc),
+        custo: parseFloat(custoMerc),
+        estoqueAtual: 0,
+        estoqueMinimo: 0,
+        categoria: categoriaMerc,
+        status: "Ativo",
+        isRevenda: false,
+        receita: [{ mercadoriaId: newMercId, quantidade: 1 }]
+      })
+    }
     
     setNomeMerc("")
     setUnidadeMerc("")
     setCustoMerc("")
     setEstoqueAtualMerc("")
     setEstoqueMinMerc("")
+    setIsTambemProduto(false)
+    setPrecoVendaMerc("")
+    setCategoriaMerc("")
     setIsOpenMerc(false)
   }
 
@@ -313,6 +339,35 @@ export default function CadastrosPage() {
                       <Input type="number" step="0.1" value={estoqueMinMerc} onChange={(e) => setEstoqueMinMerc(e.target.value)} placeholder="Ex: 1000" className="rounded-xl border-border/60" />
                     </div>
                   </div>
+
+                  <div className="flex items-center space-x-2 bg-secondary/20 p-4 rounded-xl">
+                    <Switch id="merc-produto" checked={isTambemProduto} onCheckedChange={setIsTambemProduto} />
+                    <label htmlFor="merc-produto" className="text-sm font-semibold cursor-pointer select-none">
+                      Também vender no cardápio como Produto (ex: Lata Refri)
+                    </label>
+                  </div>
+
+                  {isTambemProduto && (
+                    <div className="flex gap-4 p-4 border border-border/40 rounded-xl bg-background/50">
+                      <div className="flex flex-col gap-2 flex-1">
+                        <label className="text-sm font-semibold text-muted-foreground">Preço de Venda (R$)</label>
+                        <Input type="number" step="0.01" value={precoVendaMerc} onChange={(e) => setPrecoVendaMerc(e.target.value)} placeholder="Ex: 6.00" className="rounded-xl border-border/60" required />
+                      </div>
+                      <div className="flex flex-col gap-2 flex-1">
+                        <label className="text-sm font-semibold text-muted-foreground">Categoria</label>
+                        <Select onValueChange={(val) => setCategoriaMerc(val || "")} value={categoriaMerc}>
+                          <SelectTrigger className="rounded-xl border-border/60">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {categorias.map(cat => (
+                              <SelectItem key={cat.id} value={cat.nome}>{cat.nome}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
 
                   <Button type="submit" className="w-full rounded-xl bg-primary hover:bg-primary/90 mt-2 text-white font-bold h-12">
                     Salvar Mercadoria
