@@ -89,6 +89,28 @@ export type Transacao = {
   data: string;
 }
 
+export type Sangria = {
+  id: string;
+  valor: number;
+  descricao: string;
+  data: string;
+  realizadaPor: string;
+}
+
+export type SessaoCaixa = {
+  id: string;
+  status: 'ABERTO' | 'FECHADO';
+  saldoInicial: number;
+  saldoFinalInformado?: number;
+  saldoSistema?: number;
+  diferenca?: number;
+  sangrias: Sangria[];
+  openedAt: string;
+  closedAt?: string;
+  openedBy: string;
+  closedBy?: string;
+}
+
 export type Conta = {
   id: string;
   tipo: 'Pagar' | 'Receber';
@@ -246,6 +268,12 @@ interface AppState {
   transacoes: Transacao[];
   contas: Conta[];
   formasPagamento: FormaPagamento[];
+
+  // Caixa
+  sessaoCaixaAtual: SessaoCaixa | null;
+  historicoCaixa: SessaoCaixa[];
+
+  // Pedidos e Clientes
   clientes: Cliente[];
   regioesEntrega: RegiaoEntrega[];
   movimentacoesEstoque: MovimentacaoEstoque[];
@@ -293,6 +321,12 @@ interface AppState {
 
   // Actions Financeiro e Config
   addTransacao: (transacao: Omit<Transacao, 'id' | 'data'>) => void;
+  
+  // Caixa
+  abrirCaixa: (saldoInicial: number, openedBy: string) => void;
+  fecharCaixa: (saldoFinalInformado: number, saldoSistema: number, closedBy: string) => void;
+  registrarSangria: (sangria: Omit<Sangria, 'id' | 'data'>) => void;
+
   updateConfiguracoes: (data: Partial<Configuracoes>) => void;
   
   addFormaPagamento: (data: Omit<FormaPagamento, 'id'>) => void;
@@ -414,8 +448,10 @@ export const useStore = create<AppState>()(
         { id: '2', tipo: 'Receber', descricao: 'Acerto Ifood', valor: 1800, vencimento: new Date(Date.now() + 172800000).toISOString(), status: 'Pendente' },
         { id: '3', tipo: 'Pagar', descricao: 'Fornecedor Carnes', valor: 1200, vencimento: new Date(Date.now() - 86400000).toISOString(), status: 'Pago' },
         { id: '4', tipo: 'Pagar', descricao: 'Internet', valor: 150, vencimento: new Date(Date.now() + 86400000 * 5).toISOString(), status: 'Pendente' },
-        { id: '5', tipo: 'Receber', descricao: 'Vendas Cartão (Cielo)', valor: 3200, vencimento: new Date(Date.now() + 86400000 * 2).toISOString(), status: 'Pendente' },
+        { id: '2', tipo: 'Pagar', descricao: 'Fornecedor Embalagens', valor: 450.00, vencimento: new Date(Date.now() + 86400000 * 5).toISOString(), status: 'Pendente' }
       ],
+      sessaoCaixaAtual: null,
+      historicoCaixa: [],
       formasPagamento: [
         { id: '1', nome: 'PIX', taxa: 0, status: 'Ativo' },
         { id: '2', nome: 'Cartão de Crédito', taxa: 2.5, status: 'Ativo' },
@@ -546,9 +582,45 @@ export const useStore = create<AppState>()(
       })),
       deleteUsuario: (id) => set((state) => ({ usuarios: state.usuarios.filter(u => u.id !== id) })),
 
-      addTransacao: (data) => set((state) => ({ 
-        transacoes: [{ ...data, id: generateId(), data: new Date().toISOString() }, ...state.transacoes] 
+      addTransacao: (data) => set((state) => ({ transacoes: [...state.transacoes, { ...data, id: generateId(), data: new Date().toISOString() }] })),
+      
+      abrirCaixa: (saldoInicial, openedBy) => set((state) => ({
+        sessaoCaixaAtual: {
+          id: generateId(),
+          status: 'ABERTO',
+          saldoInicial,
+          sangrias: [],
+          openedAt: new Date().toISOString(),
+          openedBy
+        }
       })),
+      fecharCaixa: (saldoFinalInformado, saldoSistema, closedBy) => set((state) => {
+        if (!state.sessaoCaixaAtual) return state;
+        const closedCaixa: SessaoCaixa = {
+          ...state.sessaoCaixaAtual,
+          status: 'FECHADO',
+          saldoFinalInformado,
+          saldoSistema,
+          diferenca: saldoFinalInformado - saldoSistema,
+          closedAt: new Date().toISOString(),
+          closedBy
+        };
+        return {
+          sessaoCaixaAtual: null,
+          historicoCaixa: [...state.historicoCaixa, closedCaixa]
+        };
+      }),
+      registrarSangria: (data) => set((state) => {
+        if (!state.sessaoCaixaAtual) return state;
+        const novaSangria: Sangria = { ...data, id: generateId(), data: new Date().toISOString() };
+        return {
+          sessaoCaixaAtual: {
+            ...state.sessaoCaixaAtual,
+            sangrias: [...state.sessaoCaixaAtual.sangrias, novaSangria]
+          }
+        };
+      }),
+
       updateConfiguracoes: (data) => set((state) => ({
         configuracoes: { ...state.configuracoes, ...data }
       })),
