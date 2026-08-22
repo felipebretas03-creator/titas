@@ -11,6 +11,8 @@ import { FileDown, CreditCard, DollarSign, Wallet } from "lucide-react"
 import { exportToXLSX, formatCurrency } from "./export-utils"
 import { KpiCard } from "./KpiCard"
 
+import { useStore } from "@/store"
+
 // Taxas simuladas
 const TAXAS = {
   'PIX': 0, // 0%
@@ -32,12 +34,25 @@ const CORES_PAGAMENTO: Record<string, string> = {
 
 export function FinanceiroReport() {
   const { pedidos, transacoes } = useFilteredRelatorios()
+  const { produtos } = useStore()
   
   // DRE Simples
   const entradas = transacoes.filter(t => t.tipo === 'Entrada').reduce((acc, t) => acc + t.valor, 0)
   const saidas = transacoes.filter(t => t.tipo === 'Saida').reduce((acc, t) => acc + t.valor, 0)
   const lucroBruto = entradas
   const lucroOperacional = lucroBruto - saidas
+
+  // Calcular CMV
+  const cmvTotal = pedidos.reduce((acc, p) => {
+    if (p.status === 'CANCELLED') return acc;
+    const custoPedido = p.items.reduce((itemAcc: number, item: any) => {
+      const prod = produtos.find(pr => pr.id === item.produtoId)
+      // Se não tiver custo cadastrado, vamos assumir 35% do preço (margem média de restaurante para ter dados no DRE)
+      const custoItem = prod?.custo || (prod?.preco ? prod.preco * 0.35 : 0)
+      return itemAcc + (custoItem * item.quantidade)
+    }, 0)
+    return acc + custoPedido
+  }, 0)
 
   // Formas de Pagamento (Baseado nos pedidos)
   const pagamentosData = useMemo(() => {
@@ -211,23 +226,41 @@ export function FinanceiroReport() {
 
       <hr className="border-slate-200" />
 
-      {/* SEÇÃO: DRE RESUMIDO */}
+      {/* SEÇÃO: DRE GERENCIAL */}
       <section>
-        <h2 className="text-xl font-bold text-slate-800 mb-4">DRE Resumido (Fluxo de Caixa)</h2>
-        <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-sm">
+        <h2 className="text-2xl font-black text-foreground mb-4">DRE Gerencial (Demonstrativo do Resultado)</h2>
+        <div className="rounded-xl border border-border/40 overflow-hidden bg-white shadow-sm text-sm lg:text-base">
           <Table>
             <TableBody>
-              <TableRow>
-                <TableCell className="font-semibold text-slate-600">(+) RECEITA OPERACIONAL (Entradas)</TableCell>
-                <TableCell className="text-right font-medium text-emerald-600">{formatCurrency(entradas)}</TableCell>
+              <TableRow className="bg-slate-50 hover:bg-slate-50">
+                <TableCell className="font-bold text-slate-800 text-lg">1. RECEITA BRUTA</TableCell>
+                <TableCell className="text-right font-black text-emerald-600 text-lg">{formatCurrency(totalBrutoPag)}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="font-semibold text-slate-600">(-) DESPESAS E CUSTOS (Saídas)</TableCell>
+                <TableCell className="font-medium text-slate-600 pl-8">(-) Deduções e Taxas (Cartões/App)</TableCell>
+                <TableCell className="text-right font-medium text-destructive">{formatCurrency(totalTaxas)}</TableCell>
+              </TableRow>
+              <TableRow className="bg-slate-50 hover:bg-slate-50">
+                <TableCell className="font-bold text-slate-800">2. RECEITA LÍQUIDA</TableCell>
+                <TableCell className="text-right font-bold text-emerald-600">{formatCurrency(totalLiquidoPag)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium text-slate-600 pl-8">(-) CMV (Custo da Mercadoria Vendida)</TableCell>
+                <TableCell className="text-right font-medium text-destructive">{formatCurrency(cmvTotal)}</TableCell>
+              </TableRow>
+              <TableRow className="bg-slate-50 hover:bg-slate-50 border-t border-slate-200">
+                <TableCell className="font-bold text-slate-800">3. LUCRO BRUTO (Margem de Contribuição)</TableCell>
+                <TableCell className="text-right font-bold text-slate-800">{formatCurrency(totalLiquidoPag - cmvTotal)}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="font-medium text-slate-600 pl-8">(-) Despesas Fixas / Operacionais (Saídas de Caixa)</TableCell>
                 <TableCell className="text-right font-medium text-destructive">{formatCurrency(saidas)}</TableCell>
               </TableRow>
-              <TableRow className="bg-slate-50">
-                <TableCell className="font-bold text-slate-800">(=) RESULTADO OPERACIONAL</TableCell>
-                <TableCell className="text-right font-bold text-slate-800">{formatCurrency(lucroOperacional)}</TableCell>
+              <TableRow className="bg-emerald-50 hover:bg-emerald-50 border-t-2 border-emerald-200">
+                <TableCell className="font-black text-emerald-900 text-lg">4. LUCRO LÍQUIDO OPERACIONAL (EBITDA)</TableCell>
+                <TableCell className={`text-right font-black text-lg ${totalLiquidoPag - cmvTotal - saidas >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>
+                  {formatCurrency(totalLiquidoPag - cmvTotal - saidas)}
+                </TableCell>
               </TableRow>
             </TableBody>
           </Table>

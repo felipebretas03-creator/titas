@@ -5,11 +5,12 @@ import { useFilteredRelatorios } from "../context"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Legend } from "recharts"
 import { FileDown, Calendar, TrendingUp, Sun, Moon, Clock } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { exportToXLSX, formatCurrency } from "./export-utils"
 import { KpiCard } from "./KpiCard"
+import { useStore } from "@/store"
 
 // Helper para pegar hora e dia da semana
 const getHourAndDay = (dateString: string) => {
@@ -22,6 +23,7 @@ const getHourAndDay = (dateString: string) => {
 
 export function EvolutivoReport() {
   const { pedidos } = useFilteredRelatorios()
+  const { produtos } = useStore()
   const [agrupamento, setAgrupamento] = useState<string>("dia")
 
   const pedidosFiltrados = useMemo(() => pedidos.filter(p => p.status !== 'CANCELLED'), [pedidos])
@@ -43,7 +45,7 @@ export function EvolutivoReport() {
 
   // Gráfico Evolutivo (Evolução Temporal)
   const evolutivoData = useMemo(() => {
-    const map: Record<string, number> = {}
+    const map: Record<string, { faturamento: number, custo: number }> = {}
     
     pedidosFiltrados.forEach(p => {
       const d = new Date(p.createdAt)
@@ -60,11 +62,24 @@ export function EvolutivoReport() {
         key = d.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })
       }
       
-      map[key] = (map[key] || 0) + p.total
+      const custoPedido = p.items.reduce((acc: number, item: any) => {
+         const prod = produtos.find(pr => pr.id === item.produtoId)
+         const cItem = prod?.custo || (prod?.preco ? prod.preco * 0.35 : 0)
+         return acc + (cItem * item.quantidade)
+      }, 0)
+
+      if (!map[key]) map[key] = { faturamento: 0, custo: 0 }
+      map[key].faturamento += p.total
+      map[key].custo += custoPedido
     })
     
-    return Object.entries(map).map(([data, valor]) => ({ data, valor }))
-  }, [pedidosFiltrados, agrupamento])
+    return Object.entries(map).map(([data, vals]) => ({
+      data,
+      faturamento: vals.faturamento,
+      custo: vals.custo,
+      lucro: vals.faturamento - vals.custo
+    }))
+  }, [pedidosFiltrados, agrupamento, produtos])
 
   // Heatmap: Matriz [hora 0..23][dia 0..6]
   const heatmapData = useMemo(() => {
@@ -114,7 +129,7 @@ export function EvolutivoReport() {
     evolutivoData.forEach(e => {
       detailedData.push([
         e.data,
-        formatCurrency(e.valor)
+        formatCurrency(e.faturamento)
       ]);
     });
 
@@ -192,14 +207,21 @@ export function EvolutivoReport() {
         <Card className="p-6 rounded-2xl border-border/40 lg:col-span-2 shadow-sm">
           <h3 className="text-lg font-bold mb-4 flex items-center gap-2">Evolução ({agrupamento})</h3>
           <div className="h-[300px] w-full">
-            <ChartContainer config={chartConfig} className="h-full w-full">
-              <BarChart data={evolutivoData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <ChartContainer config={{
+              faturamento: { label: "Receita Bruta", color: "hsl(var(--primary))" },
+              lucro: { label: "Lucro Bruto", color: "#10b981" },
+              custo: { label: "CMV", color: "hsl(var(--destructive))" }
+            }} className="h-full w-full">
+              <ComposedChart data={evolutivoData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="data" axisLine={false} tickLine={false} tickMargin={10} />
                 <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `R$ ${val}`} />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="valor" radius={[4, 4, 0, 0]} fill="var(--color-valor)" barSize={40} />
-              </BarChart>
+                <Legend />
+                <Bar dataKey="faturamento" radius={[4, 4, 0, 0]} fill="var(--color-faturamento)" barSize={20} />
+                <Bar dataKey="custo" radius={[4, 4, 0, 0]} fill="var(--color-custo)" barSize={20} />
+                <Line type="monotone" dataKey="lucro" stroke="var(--color-lucro)" strokeWidth={3} dot={{ r: 4 }} />
+              </ComposedChart>
             </ChartContainer>
           </div>
         </Card>

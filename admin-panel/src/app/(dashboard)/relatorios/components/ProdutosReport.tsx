@@ -32,6 +32,11 @@ export function ProdutosReport() {
     
     let processados = produtos.map(prod => {
       const v = map[prod.id] || { qtd: 0, faturamento: 0 }
+      const custoItem = prod.custo || (prod.preco * 0.35) // Fallback caso não tenha custo
+      const custoTotalItem = custoItem * v.qtd
+      const lucro = v.faturamento - custoTotalItem
+      const margemLucro = v.faturamento > 0 ? (lucro / v.faturamento) * 100 : 0
+      
       return {
         id: prod.id,
         nome: prod.nome,
@@ -40,6 +45,9 @@ export function ProdutosReport() {
         estoqueMinimo: prod.estoqueMinimo || 0,
         qtdVendida: v.qtd,
         faturamento: v.faturamento,
+        custoTotal: custoTotalItem,
+        lucro: lucro,
+        margemLucro: margemLucro
       }
     })
 
@@ -101,7 +109,7 @@ export function ProdutosReport() {
       ['PERÍODO', 'DATA', '', '', '', 'TOTAL DE PRODUTOS', vendasPorProduto.length],
       ['(Todos)', new Date().toLocaleDateString('pt-BR'), '', '', '', 'PRODUTOS CURVA A', qtdCurvaA],
       [''],
-      ['PRODUTO', 'CATEGORIA', 'QTD VENDIDA', 'FATURAMENTO', 'PARTICIPAÇÃO (%)', 'CURVA ABC', 'ESTOQUE', 'STATUS ESTOQUE']
+      ['PRODUTO', 'CATEGORIA', 'QTD VENDIDA', 'FATURAMENTO', 'CMV TOTAL', 'MARGEM (%)', 'PARTICIPAÇÃO (%)', 'CURVA ABC', 'ESTOQUE', 'STATUS ESTOQUE']
     ];
 
     vendasPorProduto.forEach(p => {
@@ -110,6 +118,8 @@ export function ProdutosReport() {
         p.categoria, 
         p.qtdVendida, 
         formatCurrency(p.faturamento), 
+        formatCurrency(p.custoTotal),
+        `${p.margemLucro.toFixed(1)}%`,
         `${p.percentual.toFixed(2)}%`, 
         p.curva, 
         p.estoque, 
@@ -117,7 +127,7 @@ export function ProdutosReport() {
       ]);
     });
 
-    const columnWidths = [30, 20, 15, 20, 20, 15, 15, 20];
+    const columnWidths = [30, 20, 15, 20, 20, 15, 15, 15, 15, 20];
 
     exportToXLSX('curva_abc_produtos', [], detailedData, columnWidths)
   }
@@ -192,6 +202,8 @@ export function ProdutosReport() {
                 <TableHead className="text-center">Curva ABC</TableHead>
                 <TableHead className="text-right">Qtd. Vendida</TableHead>
                 <TableHead className="text-right">Faturamento</TableHead>
+                <TableHead className="text-right">CMV Total</TableHead>
+                <TableHead className="text-right">Margem</TableHead>
                 <TableHead className="text-center">Representa (%)</TableHead>
                 <TableHead className="text-center">Estoque Atual</TableHead>
                 <TableHead className="text-center">Status</TableHead>
@@ -214,6 +226,10 @@ export function ProdutosReport() {
                   </TableCell>
                   <TableCell className="text-right font-medium">{item.qtdVendida} un.</TableCell>
                   <TableCell className="text-right font-bold text-emerald-600">{formatCurrency(item.faturamento)}</TableCell>
+                  <TableCell className="text-right text-destructive text-sm font-medium">{formatCurrency(item.custoTotal)}</TableCell>
+                  <TableCell className={cn("text-right font-bold", item.margemLucro < 20 ? "text-rose-500" : "text-emerald-500")}>
+                    {item.margemLucro.toFixed(1)}%
+                  </TableCell>
                   <TableCell className="text-center font-medium text-muted-foreground">
                     {item.percentual.toFixed(1)}%
                   </TableCell>

@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware'
 export type OpcaoComplemento = {
   nome: string;
   preco: number;
+  custo?: number;
 }
 
 export type Complemento = {
@@ -25,6 +26,7 @@ export type Combo = {
   nome: string;
   descricao?: string;
   preco: number;
+  custo?: number;
   itens: ComboItem[]; // Produtos que compõem o combo
   status: 'Ativo' | 'Inativo';
 }
