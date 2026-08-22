@@ -80,7 +80,8 @@ export type Cliente = {
 
 export type RegiaoEntrega = {
   id: string;
-  nome: string;
+  cidade: string;
+  bairro: string;
   taxa: number;
   prazoMins: number;
   status: 'Ativo' | 'Inativo';
@@ -314,10 +315,10 @@ export const useStore = create<AppState>()(
         { id: '6', nome: 'Juliana Costa', telefone: '11944444444', cep: '04001-001', estado: 'SP', cidade: 'São Paulo', bairro: 'Paraíso', logradouro: 'Rua Vergueiro', numero: '100', frequencia: 2, totalGasto: 95.00, ultimaCompra: new Date(Date.now() - 86400000 * 20).toISOString() },
       ],
       regioesEntrega: [
-        { id: '1', nome: 'Centro', taxa: 5.0, prazoMins: 30, status: 'Ativo' },
-        { id: '2', nome: 'Zona Sul', taxa: 8.5, prazoMins: 45, status: 'Ativo' },
-        { id: '3', nome: 'Zona Norte', taxa: 10.0, prazoMins: 50, status: 'Ativo' },
-        { id: '4', nome: 'Zona Leste', taxa: 12.0, prazoMins: 60, status: 'Ativo' },
+        { id: '1', cidade: 'São Paulo', bairro: 'Sé', taxa: 5.0, prazoMins: 30, status: 'Ativo' },
+        { id: '2', cidade: 'São Paulo', bairro: 'Pinheiros', taxa: 8.5, prazoMins: 45, status: 'Ativo' },
+        { id: '3', cidade: 'Rio de Janeiro', bairro: 'Centro', taxa: 10.0, prazoMins: 50, status: 'Ativo' },
+        { id: '4', cidade: 'Belo Horizonte', bairro: 'Savassi', taxa: 12.0, prazoMins: 60, status: 'Ativo' },
       ],
       movimentacoesEstoque: [
         { id: '1', produtoId: '1', tipo: 'Saida', quantidade: 5, motivo: 'Venda', data: new Date().toISOString() },
