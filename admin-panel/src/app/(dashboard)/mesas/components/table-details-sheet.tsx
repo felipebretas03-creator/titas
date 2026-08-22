@@ -93,7 +93,7 @@ export function TableDetailsSheet({ tableId, isOpen, onClose }: TableDetailsShee
     onClose()
   }
 
-  const handleAddProduct = (product: { preco: number }) => {
+  const handleAddProduct = (product: { id: string; nome: string; preco: number }) => {
     if (!session) return;
     
     store.addPedido({

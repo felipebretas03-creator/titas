@@ -138,7 +138,7 @@ export function EvolutivoReport() {
 
           <div className="flex items-center gap-2">
             <Calendar className="text-muted-foreground w-5 h-5" />
-            <Select value={agrupamento} onValueChange={setAgrupamento}>
+            <Select value={agrupamento} onValueChange={(val) => setAgrupamento(val as any)}>
               <SelectTrigger className="w-[150px] rounded-full border-border/60 bg-white shadow-sm font-medium">
                 <SelectValue placeholder="Agrupar por" />
               </SelectTrigger>

@@ -151,7 +151,7 @@ export default function DashboardPage() {
         </h1>
         <div className="flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-4 w-full md:w-auto">
           <div className="flex-1 md:w-[140px] min-w-[120px]">
-            <Select value={periodo} onValueChange={setPeriodo}>
+            <Select value={periodo} onValueChange={(val) => setPeriodo(val as any)}>
               <SelectTrigger className="bg-white rounded-full border-border/50 h-11 px-4 md:px-5 shadow-sm font-bold text-foreground w-full">
                 <SelectValue placeholder="Data" />
               </SelectTrigger>
@@ -165,7 +165,7 @@ export default function DashboardPage() {
           </div>
           
           <div className="flex-1 md:w-[160px] min-w-[120px]">
-            <Select value={canal} onValueChange={setCanal}>
+            <Select value={canal} onValueChange={(val) => setCanal(val as any)}>
               <SelectTrigger className="bg-white rounded-full border-border/50 h-11 px-4 md:px-5 shadow-sm font-bold text-foreground w-full">
                 <SelectValue placeholder="Plataforma" />
               </SelectTrigger>

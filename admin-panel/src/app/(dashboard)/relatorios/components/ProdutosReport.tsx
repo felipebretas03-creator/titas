@@ -132,7 +132,7 @@ export function ProdutosReport() {
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <Filter className="text-muted-foreground w-5 h-5" />
-            <Select value={categoriaFiltro} onValueChange={setCategoriaFiltro}>
+            <Select value={categoriaFiltro} onValueChange={(val) => setCategoriaFiltro(val as any)}>
               <SelectTrigger className="w-[180px] rounded-full border-border/60 bg-white shadow-sm font-medium">
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>

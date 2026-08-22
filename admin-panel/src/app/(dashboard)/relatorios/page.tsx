@@ -116,7 +116,7 @@ export default function RelatoriosPage() {
 
           <div className="flex items-center gap-2 px-2">
             <Clock size={16} className="text-muted-foreground" />
-            <Select value={turno} onValueChange={setTurno}>
+            <Select value={turno} onValueChange={(val) => setTurno(val as any)}>
               <SelectTrigger className="w-[130px] border-none shadow-none bg-transparent h-8 font-bold text-slate-700 focus:ring-0">
                 <SelectValue placeholder="Turno" />
               </SelectTrigger>

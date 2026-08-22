@@ -25,6 +25,8 @@ export default function CadastrosPage() {
     addProduto({
       nome,
       preco: parseFloat(preco),
+      custo: 0,
+      estoqueAtual: 0,
       categoria,
       status: "Ativo"
     })

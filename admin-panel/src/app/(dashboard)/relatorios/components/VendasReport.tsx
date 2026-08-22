@@ -120,7 +120,7 @@ export function VendasReport() {
 
           <div className="flex items-center gap-2">
             <Filter className="text-muted-foreground w-5 h-5" />
-            <Select value={canalFiltro} onValueChange={setCanalFiltro}>
+            <Select value={canalFiltro} onValueChange={(val) => setCanalFiltro(val as any)}>
               <SelectTrigger className="w-[140px] rounded-full border-border/60 bg-white shadow-sm font-medium">
                 <SelectValue placeholder="Canal" />
               </SelectTrigger>
@@ -133,7 +133,7 @@ export function VendasReport() {
             </Select>
           </div>
 
-          <Select value={statusFiltro} onValueChange={setStatusFiltro}>
+          <Select value={statusFiltro} onValueChange={(val) => setStatusFiltro(val as any)}>
             <SelectTrigger className="w-[140px] rounded-full border-border/60 bg-white shadow-sm font-medium">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
