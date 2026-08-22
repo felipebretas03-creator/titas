@@ -44,10 +44,8 @@ export default function UsuariosPage() {
         </h1>
         
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/90 rounded-full px-6 shadow-md text-white font-semibold">
-              <Plus className="mr-2 h-4 w-4" /> Novo Usuário
-            </Button>
+          <DialogTrigger render={<Button className="bg-primary hover:bg-primary/90 rounded-full px-6 shadow-md text-white font-semibold" />}>
+            <Plus className="mr-2 h-4 w-4" /> Novo Usuário
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] rounded-[1.5rem] p-6 border-border/40">
             <DialogHeader>
