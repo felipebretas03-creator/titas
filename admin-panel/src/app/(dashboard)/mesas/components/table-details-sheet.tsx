@@ -208,12 +208,26 @@ export function TableDetailsSheet({ tableId, isOpen, onClose }: TableDetailsShee
                 Solicitações Pendentes
               </div>
               <ul className="space-y-2">
-                {requests.map(req => (
-                  <li key={req.id} className="text-sm font-medium text-amber-900 bg-white p-2 rounded border border-amber-100">
-                    - {req.type === 'WAITER' ? 'Chamou o garçom' : req.type === 'CLOSE_BILL' ? 'Pediu a conta' : 'Outra solicitação'}
-                    {req.message && <span className="block text-xs text-amber-700 mt-1">&quot;{req.message}&quot;</span>}
-                  </li>
-                ))}
+                {requests.map(req => {
+                  const getRequestLabel = (type: string) => {
+                    switch(type) {
+                      case 'WAITER': return 'Chamou o garçom'
+                      case 'CLOSE_BILL': return 'Pediu a conta'
+                      case 'NAPKINS': return 'Pediu guardanapos'
+                      case 'CUTLERY': return 'Pediu talheres'
+                      case 'ORDER_QUESTION': return 'Dúvida no pedido'
+                      case 'ORDER_PROBLEM': return 'Problema no pedido'
+                      case 'OTHER': return 'Outra solicitação'
+                      default: return 'Solicitação'
+                    }
+                  }
+                  return (
+                    <li key={req.id} className="text-sm font-medium text-amber-900 bg-white p-2 rounded border border-amber-100">
+                      - {getRequestLabel(req.type)}
+                      {req.message && <span className="block text-xs text-amber-700 mt-1">&quot;{req.message}&quot;</span>}
+                    </li>
+                  )
+                })}
               </ul>
               <Button onClick={handleResolveRequests} size="sm" className="bg-amber-500 hover:bg-amber-600 text-white w-full">
                 <Check size={16} className="mr-2" /> Marcar como Resolvidas
