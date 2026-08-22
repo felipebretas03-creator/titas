@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Plus, Trash2, Edit2, Users } from "lucide-react"
 
 export default function UsuariosPage() {
-  const { usuarios, addUsuario, deleteUsuario } = useStore()
+  const { usuarios, addUsuario, deleteUsuario, cargos } = useStore()
   const [isOpen, setIsOpen] = useState(false)
   
   const [nome, setNome] = useState("")
@@ -26,7 +26,7 @@ export default function UsuariosPage() {
     addUsuario({
       nome,
       email,
-      perfil: perfil as "Admin" | "Gerente" | "Caixa" | "Montagem",
+      perfil,
       status: "Ativo"
     })
     
@@ -44,8 +44,10 @@ export default function UsuariosPage() {
         </h1>
         
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger render={<Button className="bg-primary hover:bg-primary/90 rounded-full px-6 shadow-md text-white font-semibold" />}>
-            <Plus className="mr-2 h-4 w-4" /> Novo Usuário
+          <DialogTrigger asChild>
+            <Button className="bg-primary hover:bg-primary/90 rounded-full px-6 shadow-md text-white font-semibold">
+              <Plus className="mr-2 h-4 w-4" /> Novo Usuário
+            </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] rounded-[1.5rem] p-6 border-border/40">
             <DialogHeader>
@@ -67,10 +69,9 @@ export default function UsuariosPage() {
                     <SelectValue placeholder="Selecione o perfil" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Admin">Administrador</SelectItem>
-                    <SelectItem value="Gerente">Gerente</SelectItem>
-                    <SelectItem value="Caixa">Caixa</SelectItem>
-                    <SelectItem value="Montagem">Montagem (Cozinha)</SelectItem>
+                    {cargos.filter(c => c.status === 'Ativo').map(cargo => (
+                      <SelectItem key={cargo.id} value={cargo.nome}>{cargo.nome}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
