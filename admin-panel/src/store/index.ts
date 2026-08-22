@@ -19,9 +19,12 @@ export type Categoria = {
   nome: string;
 }
 
+export type Permissao = 'DASHBOARD' | 'PDV' | 'PEDIDOS' | 'FINANCEIRO' | 'CONFIGURACOES' | 'CADASTROS' | 'RELATORIOS' | 'MESAS';
+
 export type Cargo = {
   id: string;
   nome: string;
+  permissoes: Permissao[];
   status: 'Ativo' | 'Inativo';
 }
 
@@ -264,12 +267,12 @@ export const useStore = create<AppState>()(
         { id: '4', nome: 'Combos' },
       ],
       cargos: [
-        { id: '1', nome: 'Admin', status: 'Ativo' },
-        { id: '2', nome: 'Gerente', status: 'Ativo' },
-        { id: '3', nome: 'Caixa', status: 'Ativo' },
-        { id: '4', nome: 'Montagem', status: 'Ativo' },
-        { id: '5', nome: 'Garçom', status: 'Ativo' },
-        { id: '6', nome: 'Motoboy', status: 'Ativo' },
+        { id: '1', nome: 'Admin', permissoes: ['DASHBOARD', 'PDV', 'PEDIDOS', 'FINANCEIRO', 'CONFIGURACOES', 'CADASTROS', 'RELATORIOS', 'MESAS'], status: 'Ativo' },
+        { id: '2', nome: 'Gerente', permissoes: ['DASHBOARD', 'PDV', 'PEDIDOS', 'CADASTROS', 'RELATORIOS', 'MESAS'], status: 'Ativo' },
+        { id: '3', nome: 'Caixa', permissoes: ['PDV', 'PEDIDOS', 'FINANCEIRO', 'MESAS'], status: 'Ativo' },
+        { id: '4', nome: 'Montagem', permissoes: ['PEDIDOS'], status: 'Ativo' },
+        { id: '5', nome: 'Garçom', permissoes: ['PEDIDOS', 'MESAS'], status: 'Ativo' },
+        { id: '6', nome: 'Motoboy', permissoes: ['PEDIDOS'], status: 'Ativo' },
       ],
       usuarios: [
         { id: '1', nome: 'Marcos Felipe', email: 'admin@titas.com', perfil: 'Admin', status: 'Ativo' },
