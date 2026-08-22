@@ -1,17 +1,31 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export type Mercadoria = {
+  id: string;
+  nome: string;
+  unidadeMedida: string; // 'un' | 'g' | 'L' | 'ml' | 'kg'
+  custo: number;
+  estoqueAtual: number;
+  estoqueMinimo: number;
+  status: 'Ativo' | 'Inativo';
+}
+
 export type Produto = {
   id: string;
   nome: string;
   categoria: string;
   preco: number;
-  custo: number; // Novo
-  estoqueAtual: number; // Novo
-  estoqueMinimo?: number; // Novo
   status: 'Ativo' | 'Inativo';
   descricao?: string;
   imagemUrl?: string;
+  
+  // Controle de Estoque
+  isRevenda?: boolean;
+  custo: number;
+  estoqueAtual: number;
+  estoqueMinimo?: number;
+  receita?: { mercadoriaId: string; quantidade: number }[];
 }
 
 export type Categoria = {
@@ -185,6 +199,7 @@ export type ConfiguracoesTablet = {
 
 interface AppState {
   produtos: Produto[];
+  mercadorias: Mercadoria[];
   categorias: Categoria[];
   usuarios: Usuario[];
   cargos: Cargo[];
@@ -203,10 +218,14 @@ interface AppState {
   solicitacoesAtendimento: SolicitacaoAtendimento[];
   configuracoesTablet: ConfiguracoesTablet;
   
-  // Actions Produtos
+  // Actions Produtos e Mercadorias
   addProduto: (produto: Omit<Produto, 'id'>) => void;
   updateProduto: (id: string, data: Partial<Produto>) => void;
   deleteProduto: (id: string) => void;
+
+  addMercadoria: (data: Omit<Mercadoria, 'id'>) => void;
+  updateMercadoria: (id: string, data: Partial<Mercadoria>) => void;
+  deleteMercadoria: (id: string) => void;
   
   // Actions Categorias
   addCategoria: (categoria: Omit<Categoria, 'id'>) => void;
@@ -253,13 +272,18 @@ export const useStore = create<AppState>()(
   persist(
     (set) => ({
       produtos: [
-        { id: '1', nome: 'X-Burger Clássico', categoria: 'Lanches', preco: 25.90, custo: 10.50, estoqueAtual: 50, estoqueMinimo: 20, status: 'Ativo', descricao: 'Pão brioche, blend 160g, queijo prato e maionese da casa.' },
-        { id: '2', nome: 'Batata Frita G', categoria: 'Porções', preco: 18.50, custo: 5.00, estoqueAtual: 100, estoqueMinimo: 30, status: 'Ativo', descricao: 'Porção grande de batata palito bem sequinha.' },
-        { id: '3', nome: 'Coca-Cola Lata', categoria: 'Bebidas', preco: 6.00, custo: 2.50, estoqueAtual: 5, estoqueMinimo: 48, status: 'Ativo' }, // Estoque baixo de propósito
-        { id: '4', nome: 'X-Bacon Supremo', categoria: 'Lanches', preco: 32.90, custo: 14.00, estoqueAtual: 30, estoqueMinimo: 15, status: 'Ativo', descricao: 'Blend 160g, muito bacon, cheddar e molho barbecue.' },
-        { id: '5', nome: 'Onion Rings', categoria: 'Porções', preco: 22.00, custo: 6.50, estoqueAtual: 40, estoqueMinimo: 20, status: 'Ativo' },
-        { id: '6', nome: 'Guaraná Lata', categoria: 'Bebidas', preco: 6.00, custo: 2.50, estoqueAtual: 60, estoqueMinimo: 24, status: 'Ativo' },
-        { id: '7', nome: 'Combo Casal', categoria: 'Combos', preco: 75.00, custo: 30.00, estoqueAtual: 20, estoqueMinimo: 10, status: 'Ativo', descricao: '2 Lanches + 1 Frita G + 2 Refris' },
+        { id: '1', nome: 'X-Burger Clássico', categoria: 'Lanches', preco: 25.90, custo: 10.50, estoqueAtual: 50, estoqueMinimo: 20, status: 'Ativo', descricao: 'Pão brioche, blend 160g, queijo prato e maionese da casa.', isRevenda: false, receita: [{ mercadoriaId: '1', quantidade: 1 }, { mercadoriaId: '2', quantidade: 160 }, { mercadoriaId: '3', quantidade: 30 }] },
+        { id: '2', nome: 'Batata Frita G', categoria: 'Porções', preco: 18.50, custo: 5.00, estoqueAtual: 100, estoqueMinimo: 30, status: 'Ativo', descricao: 'Porção grande de batata palito bem sequinha.', isRevenda: false },
+        { id: '3', nome: 'Coca-Cola Lata', categoria: 'Bebidas', preco: 6.00, custo: 2.50, estoqueAtual: 5, estoqueMinimo: 48, status: 'Ativo', isRevenda: true },
+        { id: '4', nome: 'X-Bacon Supremo', categoria: 'Lanches', preco: 32.90, custo: 14.00, estoqueAtual: 30, estoqueMinimo: 15, status: 'Ativo', descricao: 'Blend 160g, muito bacon, cheddar e molho barbecue.', isRevenda: false },
+        { id: '5', nome: 'Onion Rings', categoria: 'Porções', preco: 22.00, custo: 6.50, estoqueAtual: 40, estoqueMinimo: 20, status: 'Ativo', isRevenda: false },
+        { id: '6', nome: 'Guaraná Lata', categoria: 'Bebidas', preco: 6.00, custo: 2.50, estoqueAtual: 60, estoqueMinimo: 24, status: 'Ativo', isRevenda: true },
+        { id: '7', nome: 'Combo Casal', categoria: 'Combos', preco: 75.00, custo: 30.00, estoqueAtual: 20, estoqueMinimo: 10, status: 'Ativo', descricao: '2 Lanches + 1 Frita G + 2 Refris', isRevenda: false },
+      ],
+      mercadorias: [
+        { id: '1', nome: 'Pão de Hambúrguer', unidadeMedida: 'un', custo: 1.50, estoqueAtual: 200, estoqueMinimo: 50, status: 'Ativo' },
+        { id: '2', nome: 'Carne Moída (Blend)', unidadeMedida: 'g', custo: 0.035, estoqueAtual: 15000, estoqueMinimo: 5000, status: 'Ativo' },
+        { id: '3', nome: 'Queijo Prato', unidadeMedida: 'g', custo: 0.045, estoqueAtual: 3000, estoqueMinimo: 1000, status: 'Ativo' },
       ],
       categorias: [
         { id: '1', nome: 'Lanches' },
@@ -399,6 +423,12 @@ export const useStore = create<AppState>()(
       })),
       deleteProduto: (id) => set((state) => ({ produtos: state.produtos.filter(p => p.id !== id) })),
 
+      addMercadoria: (data) => set((state) => ({ mercadorias: [...state.mercadorias, { ...data, id: generateId() }] })),
+      updateMercadoria: (id, data) => set((state) => ({
+        mercadorias: state.mercadorias.map(m => m.id === id ? { ...m, ...data } : m)
+      })),
+      deleteMercadoria: (id) => set((state) => ({ mercadorias: state.mercadorias.filter(m => m.id !== id) })),
+
       addCategoria: (data) => set((state) => ({ categorias: [...state.categorias, { ...data, id: generateId() }] })),
       deleteCategoria: (id) => set((state) => ({ categorias: state.categorias.filter(c => c.id !== id) })),
 
@@ -444,9 +474,37 @@ export const useStore = create<AppState>()(
         sessoesMesa: state.sessoesMesa.map(s => s.id === id ? { ...s, ...data } : s)
       })),
 
-      addPedido: (data) => set((state) => ({ 
-        pedidos: [...state.pedidos, { ...data, id: generateId(), createdAt: new Date().toISOString() }] 
-      })),
+      addPedido: (data) => set((state) => {
+        const novoPedido = { ...data, id: generateId(), createdAt: new Date().toISOString() } as Pedido;
+        
+        let novosProdutos = [...state.produtos];
+        let novasMercadorias = [...state.mercadorias];
+        
+        novoPedido.items.forEach(item => {
+          const produto = novosProdutos.find(p => p.id === item.produtoId);
+          if (produto) {
+            if (produto.isRevenda) {
+              novosProdutos = novosProdutos.map(p => 
+                p.id === produto.id ? { ...p, estoqueAtual: p.estoqueAtual - item.quantidade } : p
+              );
+            } else if (produto.receita && produto.receita.length > 0) {
+              produto.receita.forEach(rec => {
+                novasMercadorias = novasMercadorias.map(m => 
+                  m.id === rec.mercadoriaId 
+                    ? { ...m, estoqueAtual: m.estoqueAtual - (rec.quantidade * item.quantidade) }
+                    : m
+                );
+              });
+            }
+          }
+        });
+        
+        return { 
+          pedidos: [...state.pedidos, novoPedido],
+          produtos: novosProdutos,
+          mercadorias: novasMercadorias
+        };
+      }),
       updatePedido: (id, data) => set((state) => ({
         pedidos: state.pedidos.map(p => p.id === id ? { ...p, ...data } : p)
       })),
