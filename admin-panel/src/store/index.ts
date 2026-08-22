@@ -1,6 +1,34 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+export type OpcaoComplemento = {
+  nome: string;
+  preco: number;
+}
+
+export type Complemento = {
+  id: string;
+  nome: string; // Ex: "Ponto da Carne", "Adicionais"
+  obrigatorio: boolean;
+  maximo: number;
+  opcoes: OpcaoComplemento[];
+  status: 'Ativo' | 'Inativo';
+}
+
+export type ComboItem = {
+  produtoId: string;
+  quantidade: number;
+}
+
+export type Combo = {
+  id: string;
+  nome: string;
+  descricao?: string;
+  preco: number;
+  itens: ComboItem[]; // Produtos que compõem o combo
+  status: 'Ativo' | 'Inativo';
+}
+
 export type Mercadoria = {
   id: string;
   nome: string;
@@ -26,6 +54,7 @@ export type Produto = {
   estoqueAtual: number;
   estoqueMinimo?: number;
   receita?: { mercadoriaId: string; quantidade: number }[];
+  complementos?: string[]; // IDs dos complementos
 }
 
 export type Categoria = {
@@ -200,6 +229,8 @@ export type ConfiguracoesTablet = {
 interface AppState {
   produtos: Produto[];
   mercadorias: Mercadoria[];
+  complementos: Complemento[];
+  combos: Combo[];
   categorias: Categoria[];
   usuarios: Usuario[];
   cargos: Cargo[];
@@ -226,6 +257,14 @@ interface AppState {
   addMercadoria: (data: Omit<Mercadoria, 'id'> & { id?: string }) => void;
   updateMercadoria: (id: string, data: Partial<Mercadoria>) => void;
   deleteMercadoria: (id: string) => void;
+
+  addComplemento: (data: Omit<Complemento, 'id'>) => void;
+  updateComplemento: (id: string, data: Partial<Complemento>) => void;
+  deleteComplemento: (id: string) => void;
+
+  addCombo: (data: Omit<Combo, 'id'>) => void;
+  updateCombo: (id: string, data: Partial<Combo>) => void;
+  deleteCombo: (id: string) => void;
   
   // Actions Categorias
   addCategoria: (categoria: Omit<Categoria, 'id'>) => void;
@@ -284,6 +323,44 @@ export const useStore = create<AppState>()(
         { id: '1', nome: 'Pão de Hambúrguer', unidadeMedida: 'un', custo: 1.50, estoqueAtual: 200, estoqueMinimo: 50, status: 'Ativo' },
         { id: '2', nome: 'Carne Moída (Blend)', unidadeMedida: 'g', custo: 0.035, estoqueAtual: 15000, estoqueMinimo: 5000, status: 'Ativo' },
         { id: '3', nome: 'Queijo Prato', unidadeMedida: 'g', custo: 0.045, estoqueAtual: 3000, estoqueMinimo: 1000, status: 'Ativo' },
+      ],
+      complementos: [
+        {
+          id: '1',
+          nome: 'Ponto da Carne',
+          obrigatorio: true,
+          maximo: 1,
+          opcoes: [
+            { nome: 'Mal Passado', preco: 0 },
+            { nome: 'Ao Ponto', preco: 0 },
+            { nome: 'Bem Passado', preco: 0 }
+          ],
+          status: 'Ativo'
+        },
+        {
+          id: '2',
+          nome: 'Adicionais',
+          obrigatorio: false,
+          maximo: 5,
+          opcoes: [
+            { nome: 'Bacon', preco: 4.5 },
+            { nome: 'Cheddar', preco: 3.5 },
+            { nome: 'Ovo', preco: 2.0 }
+          ],
+          status: 'Ativo'
+        }
+      ],
+      combos: [
+        {
+          id: '1',
+          nome: 'Combo X-Tudo + Fritas + Refri',
+          preco: 45.0,
+          itens: [
+            { produtoId: '1', quantidade: 1 }, // Lanche
+            { produtoId: '2', quantidade: 1 } // Batata
+          ],
+          status: 'Ativo'
+        }
       ],
       categorias: [
         { id: '1', nome: 'Lanches' },
@@ -428,6 +505,18 @@ export const useStore = create<AppState>()(
         mercadorias: state.mercadorias.map(m => m.id === id ? { ...m, ...data } : m)
       })),
       deleteMercadoria: (id) => set((state) => ({ mercadorias: state.mercadorias.filter(m => m.id !== id) })),
+
+      addComplemento: (data) => set((state) => ({ complementos: [...state.complementos, { ...data, id: generateId() }] })),
+      updateComplemento: (id, data) => set((state) => ({
+        complementos: state.complementos.map(c => c.id === id ? { ...c, ...data } : c)
+      })),
+      deleteComplemento: (id) => set((state) => ({ complementos: state.complementos.filter(c => c.id !== id) })),
+
+      addCombo: (data) => set((state) => ({ combos: [...state.combos, { ...data, id: generateId() }] })),
+      updateCombo: (id, data) => set((state) => ({
+        combos: state.combos.map(c => c.id === id ? { ...c, ...data } : c)
+      })),
+      deleteCombo: (id) => set((state) => ({ combos: state.combos.filter(c => c.id !== id) })),
 
       addCategoria: (data) => set((state) => ({ categorias: [...state.categorias, { ...data, id: generateId() }] })),
       deleteCategoria: (id) => set((state) => ({ categorias: state.categorias.filter(c => c.id !== id) })),
