@@ -242,6 +242,7 @@ interface AppState {
   categorias: Categoria[];
   usuarios: Usuario[];
   cargos: Cargo[];
+  usuarioLogadoId: string | null;
   transacoes: Transacao[];
   contas: Conta[];
   formasPagamento: FormaPagamento[];
@@ -286,6 +287,9 @@ interface AppState {
   
   addCargo: (cargo: Omit<Cargo, 'id'>) => void;
   deleteCargo: (id: string) => void;
+
+  login: (email: string) => boolean;
+  logout: () => void;
 
   // Actions Financeiro e Config
   addTransacao: (transacao: Omit<Transacao, 'id' | 'data'>) => void;
@@ -382,19 +386,17 @@ export const useStore = create<AppState>()(
         { id: '4', nome: 'Combos' },
       ],
       cargos: [
-        { id: '1', nome: 'Admin', permissoes: ['DASHBOARD', 'PDV', 'PEDIDOS', 'FINANCEIRO', 'CONFIGURACOES', 'CADASTROS', 'RELATORIOS', 'MESAS'], status: 'Ativo' },
-        { id: '2', nome: 'Gerente', permissoes: ['DASHBOARD', 'PDV', 'PEDIDOS', 'CADASTROS', 'RELATORIOS', 'MESAS'], status: 'Ativo' },
-        { id: '3', nome: 'Caixa', permissoes: ['PDV', 'PEDIDOS', 'FINANCEIRO', 'MESAS'], status: 'Ativo' },
-        { id: '4', nome: 'Montagem', permissoes: ['PEDIDOS'], status: 'Ativo' },
-        { id: '5', nome: 'Garçom', permissoes: ['PEDIDOS', 'MESAS'], status: 'Ativo' },
-        { id: '6', nome: 'Motoboy', permissoes: ['PEDIDOS'], status: 'Ativo' },
+        { id: '1', nome: 'Administrador', permissoes: ['DASHBOARD', 'PDV', 'PEDIDOS', 'FINANCEIRO', 'CONFIGURACOES', 'CADASTROS', 'RELATORIOS', 'MESAS'], status: 'Ativo' },
+        { id: '2', nome: 'Gerente', permissoes: ['DASHBOARD', 'FINANCEIRO', 'RELATORIOS', 'CADASTROS', 'CONFIGURACOES'], status: 'Ativo' },
+        { id: '3', nome: 'Caixa', permissoes: ['PDV', 'PEDIDOS'], status: 'Ativo' },
+        { id: '4', nome: 'Montagem / Batata / Despacho', permissoes: ['PEDIDOS'], status: 'Ativo' },
       ],
       usuarios: [
-        { id: '1', nome: 'Marcos Felipe', email: 'admin@titas.com', perfil: 'Admin', status: 'Ativo' },
-        { id: '2', nome: 'João Caixa', email: 'joao@titas.com', perfil: 'Caixa', status: 'Ativo' },
-        { id: '3', nome: 'Carlos', email: 'carlos@titas.com', perfil: 'Garçom', status: 'Ativo' },
-        { id: '4', nome: 'Roberto', email: 'roberto@titas.com', perfil: 'Motoboy', status: 'Ativo' },
+        { id: '1', nome: 'Felipe Bretas (Admin)', email: 'admin@titas.com', perfil: '1', status: 'Ativo' },
+        { id: '2', nome: 'João (Caixa)', email: 'caixa@titas.com', perfil: '3', status: 'Ativo' },
+        { id: '3', nome: 'Maria (Cozinha)', email: 'cozinha@titas.com', perfil: '4', status: 'Ativo' },
       ],
+      usuarioLogadoId: '1',
       transacoes: [
         { id: '1', tipo: 'Entrada', valor: 1250.00, descricao: 'Vendas do Turno (Manhã)', categoria: 'Vendas', formaPagamento: 'Cartão de Crédito', data: new Date().toISOString() },
         { id: '2', tipo: 'Saida', valor: 350.00, descricao: 'Pagamento Fornecedor (Bebidas)', categoria: 'Fornecedores', data: new Date().toISOString() },
@@ -631,6 +633,21 @@ export const useStore = create<AppState>()(
         solicitacoesAtendimento: state.solicitacoesAtendimento.map(s => s.id === id ? { ...s, ...data } : s)
       })),
       
+
+      login: (email) => {
+        let success = false;
+        set((state) => {
+          const user = state.usuarios.find(u => u.email.toLowerCase() === email.toLowerCase());
+          if (user && user.status === 'Ativo') {
+            success = true;
+            return { usuarioLogadoId: user.id };
+          }
+          return state;
+        });
+        return success;
+      },
+      logout: () => set({ usuarioLogadoId: null }),
+
     }),
     {
       name: 'titas-core-storage-v2',
